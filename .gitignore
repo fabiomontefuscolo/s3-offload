@@ -1,0 +1,7 @@
+/vendor/
+/node_modules/
+composer.lock
+.env
+.DS_Store
+*.log
+localstack_data/
