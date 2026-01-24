@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<ruleset name="S3 Offloader">
+    <description>Coding standards for S3 Offloader plugin</description>
+
+    <file>src</file>
+    <file>s3-offloader.php</file>
+
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+    <exclude-pattern>*/tests/*</exclude-pattern>
+
+    <rule ref="WordPress">
+        <exclude name="WordPress.Files.FileName"/>
+    </rule>
+
+    <config name="minimum_supported_wp_version" value="7.4"/>
+    <config name="testVersion" value="7.4-"/>
+</ruleset>
