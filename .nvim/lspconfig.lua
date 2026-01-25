@@ -1,6 +1,7 @@
 return {
     intelephense = {
         config = {
+            -- cmd = { "ncat", "127.0.0.1", "5657" },
             cmd = { "intelephense", "--stdio" },
             filetypes = { "php" },
             settings = {
