@@ -47,7 +47,8 @@ _aws () {
         -e AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION} \
         localstack aws --endpoint-url=http://localhost:4566 "$@"
 }
-_aws --endpoint-url=http://localhost:4566 s3 mb s3://${S3_OFFLOADER_BUCKET}
+_aws --endpoint-url=http://localhost:4566 s3 mb s3://${S3_OFFLOADER_BUCKET} --region ${AWS_DEFAULT_REGION}
+_aws s3api put-bucket-acl --bucket wordpress-media --acl public-read
 
 echo ""
 echo "Configuring S3 Offloader for LocalStack..."
