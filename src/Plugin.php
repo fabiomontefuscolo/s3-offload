@@ -1,5 +1,8 @@
 <?php
+
 namespace S3Offloader;
+
+use S3Offloader\Admin\SettingsPage;
 
 class Plugin
 {
@@ -36,7 +39,7 @@ class Plugin
             __('S3 Offloader', 's3-offloader'),
             'manage_options',
             's3-offloader',
-            array(Settings::class, 'render_page')
+            array(SettingsPage::class, 'render_page')
         );
     }
 }
