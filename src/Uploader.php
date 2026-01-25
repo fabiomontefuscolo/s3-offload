@@ -69,32 +69,76 @@ class Uploader {
 			return false;
 		}
 
-		$key = self::get_s3_key( $attachment_id );
+		$key        = self::get_s3_key( $attachment_id );
+		$mime_type  = get_post_mime_type( $attachment_id );
+		$delete_local = get_option( 's3_offloader_delete_local', false );
+
+		// Upload main file.
+		$s3_url = self::upload_file_to_s3( $s3_client, $bucket, $file, $key, $mime_type );
+		if ( ! $s3_url ) {
+			return false;
+		}
+
+		// Store S3 URL in post meta.
+		update_post_meta( $attachment_id, '_s3_offloader_url', $s3_url );
+
+		// Upload related files.
+		self::upload_thumbnails( $s3_client, $bucket, $attachment_id, $file, $key );
+
+		// Delete local main file if option is enabled.
+		if ( $delete_local ) {
+			@unlink( $file );
+		}
+
+		return true;
+	}
+
+
+	private static function upload_file_to_s3( $s3_client, $bucket, $file_path, $key, $mime_type ) {
+		if ( ! file_exists( $file_path ) ) {
+			return false;
+		}
 
 		try {
 			$result = $s3_client->putObject(
 				array(
 					'Bucket'      => $bucket,
 					'Key'         => $key,
-					'SourceFile'  => $file,
+					'SourceFile'  => $file_path,
 					'ACL'         => 'public-read',
-					'ContentType' => get_post_mime_type( $attachment_id ),
+					'ContentType' => $mime_type,
 				)
 			);
 
-			// Store S3 URL in post meta.
-			$s3_url = $result['ObjectURL'];
-			update_post_meta( $attachment_id, '_s3_offloader_url', $s3_url );
-
-			// Delete local file if option is enabled.
-			if ( get_option( 's3_offloader_delete_local', false ) ) {
-				@unlink( $file );
-			}
-
-			return true;
+			return $result['ObjectURL'];
 		} catch ( AwsException $e ) {
-			error_log( 'S3 Offloader: Failed to upload file: ' . $e->getMessage() );
+			error_log( 'S3 Offloader: Failed to upload file ' . $file_path . ': ' . $e->getMessage() );
 			return false;
+		}
+	}
+
+
+	private static function upload_thumbnails( $s3_client, $bucket, $attachment_id, $main_file, $main_key ) {
+		$metadata = wp_get_attachment_metadata( $attachment_id );
+		if ( empty( $metadata['sizes'] ) ) {
+			return;
+		}
+
+		$upload_dir   = dirname( $main_file );
+		$base_key     = dirname( $main_key );
+		$delete_local = get_option( 's3_offloader_delete_local', false );
+		$default_mime = get_post_mime_type( $attachment_id );
+
+		foreach ( $metadata['sizes'] as $size_name => $size_data ) {
+			$thumbnail_file = $upload_dir . '/' . $size_data['file'];
+			$thumbnail_key  = $base_key . '/' . $size_data['file'];
+			$thumbnail_mime = $size_data['mime-type'] ?? $default_mime;
+
+			$s3_url = self::upload_file_to_s3( $s3_client, $bucket, $thumbnail_file, $thumbnail_key, $thumbnail_mime );
+
+			if ( $s3_url && $delete_local ) {
+				@unlink( $thumbnail_file );
+			}
 		}
 	}
 
