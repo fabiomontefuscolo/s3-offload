@@ -75,8 +75,8 @@ class Uploader {
 			return false;
 		}
 
-		$key        = self::get_s3_key( $attachment_id );
-		$mime_type  = get_post_mime_type( $attachment_id );
+		$key          = self::get_s3_key( $attachment_id );
+		$mime_type    = get_post_mime_type( $attachment_id );
 		$delete_local = PluginConfig::getDeleteLocal();
 
 		// Upload main file.
