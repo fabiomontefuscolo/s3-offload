@@ -53,6 +53,12 @@ class Uploader {
 	}
 
 
+	public static function upload_after_metadata_generation( $metadata, $attachment_id ) {
+		self::upload_to_s3( $attachment_id );
+		return $metadata;
+	}
+
+
 	public static function upload_to_s3( $attachment_id ) {
 		$s3_client = self::get_s3_client();
 		if ( ! $s3_client ) {

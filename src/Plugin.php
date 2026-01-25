@@ -24,7 +24,7 @@ class Plugin
     private function init_hooks()
     {
         add_action('admin_menu', array($this, 'add_admin_menu'));
-        add_action('add_attachment', array(Uploader::class, 'upload_to_s3'));
+        add_filter('wp_generate_attachment_metadata', array(Uploader::class, 'upload_after_metadata_generation'), 10, 2);
         add_filter('wp_get_attachment_url', array(Uploader::class, 'filter_attachment_url'), 10, 2);
 
         if (defined('WP_CLI')) {
