@@ -7,10 +7,6 @@ fi
 docker-compose up --detach --wait
 
 echo ""
-echo "Waiting for services to be ready..."
-sleep 10
-
-echo ""
 echo "Installing Composer dependencies..."
 docker-compose exec wordpress composer install -d /var/www/html/wp-content/plugins/s3-offloader
 
