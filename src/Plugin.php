@@ -23,6 +23,8 @@ class Plugin {
 		add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
 		add_filter( 'wp_generate_attachment_metadata', array( Uploader::class, 'upload_after_metadata_generation' ), 10, 2 );
 		add_filter( 'wp_get_attachment_url', array( Uploader::class, 'filter_attachment_url' ), 10, 2 );
+		add_filter( 'wp_get_attachment_image_src', array( Uploader::class, 'filter_attachment_image_src' ), 10, 4 );
+		add_filter( 'wp_calculate_image_srcset', array( Uploader::class, 'filter_image_srcset' ), 10, 5 );
 
 		if ( defined( 'WP_CLI' ) ) {
 			\WP_CLI::add_command( 's3-offloader', CLI\Commands::class );
