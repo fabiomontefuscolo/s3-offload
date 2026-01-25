@@ -15,11 +15,11 @@ class Uploader {
 			return self::$s3_client;
 		}
 
-		$access_key     = get_option( 's3_offloader_access_key' );
-		$secret_key     = get_option( 's3_offloader_secret_key' );
-		$region         = get_option( 's3_offloader_region', 'us-east-1' );
-		$endpoint       = get_option( 's3_offloader_endpoint', '' );
-		$use_path_style = get_option( 's3_offloader_use_path_style', false );
+		$access_key     = PluginConfig::getAccessKey();
+		$secret_key     = PluginConfig::getSecretKey();
+		$region         = PluginConfig::getRegion();
+		$endpoint       = PluginConfig::getEndpoint();
+		$use_path_style = PluginConfig::getUsePathStyle();
 
 		if ( empty( $access_key ) || empty( $secret_key ) ) {
 			return false;
@@ -59,7 +59,7 @@ class Uploader {
 			return false;
 		}
 
-		$bucket = get_option( 's3_offloader_bucket' );
+		$bucket = PluginConfig::getBucket();
 		if ( empty( $bucket ) ) {
 			return false;
 		}
@@ -71,7 +71,7 @@ class Uploader {
 
 		$key        = self::get_s3_key( $attachment_id );
 		$mime_type  = get_post_mime_type( $attachment_id );
-		$delete_local = get_option( 's3_offloader_delete_local', false );
+		$delete_local = PluginConfig::getDeleteLocal();
 
 		// Upload main file.
 		$s3_url = self::upload_file_to_s3( $s3_client, $bucket, $file, $key, $mime_type );
@@ -126,7 +126,7 @@ class Uploader {
 
 		$upload_dir   = dirname( $main_file );
 		$base_key     = dirname( $main_key );
-		$delete_local = get_option( 's3_offloader_delete_local', false );
+		$delete_local = PluginConfig::getDeleteLocal();
 		$default_mime = get_post_mime_type( $attachment_id );
 
 		foreach ( $metadata['sizes'] as $size_name => $size_data ) {

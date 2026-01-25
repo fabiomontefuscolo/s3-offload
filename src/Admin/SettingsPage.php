@@ -2,6 +2,8 @@
 
 namespace S3Offloader\Admin;
 
+use S3Offloader\PluginConfig;
+
 class SettingsPage
 {
     public static function render_page()
@@ -17,14 +19,13 @@ class SettingsPage
             echo '<div class="notice notice-success"><p>' . esc_html__('Settings saved.', 's3-offloader') . '</p></div>';
         }
 
-        $access_key     = get_option('s3_offloader_access_key', '');
-        $secret_key     = get_option('s3_offloader_secret_key', '');
-        $bucket         = get_option('s3_offloader_bucket', '');
-        $region         = get_option('s3_offloader_region', 'us-east-1');
-        $endpoint       = get_option('s3_offloader_endpoint', '');
-        $use_path_style = get_option('s3_offloader_use_path_style', false);
-        $delete_local   = get_option('s3_offloader_delete_local', false);
-
+        $access_key     = PluginConfig::getAccessKey() ?? '';
+        $secret_key     = PluginConfig::getSecretKey() ?? '';
+        $bucket         = PluginConfig::getBucket() ?? '';
+        $region         = PluginConfig::getRegion();
+        $endpoint       = PluginConfig::getEndpoint();
+        $use_path_style = PluginConfig::getUsePathStyle();
+        $delete_local   = PluginConfig::getDeleteLocal();
 ?>
         <div class="wrap">
             <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
