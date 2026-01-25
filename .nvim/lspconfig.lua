@@ -1,13 +1,14 @@
 return {
     intelephense = {
         config = {
-            -- cmd = { "ncat", "127.0.0.1", "5657" },
-            cmd = { "intelephense", "--stdio" },
+            -- cmd = { "ncat", "127.0.0.1", "4567" },
+            -- cmd = { "intelephense", "--stdio" },
+            cmd = { "docker-compose", "run", "--rm", "-T", "-i", "intelephense" },
             filetypes = { "php" },
             settings = {
                 intelephense = {
-                    files = {
-                        maxSize = 5000000, -- 5 MB
+                    trace = {
+                        server = "verbose",
                     },
                     -- stylua: ignore
                     stubs = {
@@ -23,15 +24,6 @@ return {
                         "xmlreader", "xmlwriter", "xsl", "zip", "zlib",
                     },
                     -- stylua: ignore
-                    environment = {
-                        includePaths = {
-                            "/home/fabio/.composer/vendor/php-stubs/wordpress-stubs",
-                            "/home/fabio/.composer/vendor/php-stubs/wordpress-globals",
-                            "/home/fabio/.composer/vendor/php-stubs/wp-cli-stubs",
-                            "/home/fabio/.composer/vendor/php-stubs/woocommerce-stubs",
-                            "/home/fabio/.composer/vendor/php-stubs/acf-pro-stubs"
-                        }
-                    },
                 },
             },
         },

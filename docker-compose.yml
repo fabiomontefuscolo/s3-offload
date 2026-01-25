@@ -52,18 +52,25 @@ services:
       timeout: 10s
       retries: 5
 
-  # intelephense:
-  #   build:
-  #     context: .
-  #   image: local-wp-s3-offloader
-  #   command: [ "socat", "-v", "-d", "EXEC:'intelephense --stdio',stderr", "TCP4-LISTEN:5657,fork,reuseaddr" ]
-  #   # command: [ "ncat", "-o", "/dev/stdout", "-v", "-l", "-k", "-p", "5657", "-c", "'intelephense --stdio'"]
-  #   ports:
-  #     - "127.0.0.1:5657:5657"
-  #   working_dir: ${PWD}
-  #   volumes:
-  #     - ./:${PWD}
-  #     - wordpress_data:/var/www/html
+  intelephense:
+    build:
+      context: .
+    image: local-wp-s3-offloader
+    # command: [ "socat", "-v", "-d", "EXEC:'intelephense --stdio',stderr", "TCP4-LISTEN:4567,fork,reuseaddr" ]
+    # command: [ "ncat", "-o", "/dev/stdout", "-v", "-l", "-k", "-p", "4567", "-c", "'intelephense --stdio'"]
+    command: [ "intelephense", "--stdio", "--clientProcessId", "1" ]
+    restart: on-failure
+    stdin_open: true
+    profiles:
+      - tools
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=8192
+    user: www-data
+    ports:
+      - "127.0.0.1:5657:5657" # only if via tcp (refs .nvim/lspconfig.lua)
+    working_dir: ${PWD}
+    volumes:
+      - ./:${PWD}
 
 volumes:
   wordpress_data:
