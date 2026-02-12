@@ -1,4 +1,9 @@
 <?php
+/*
+ * Main plugin class for S3 Offloader.
+ *
+ * @package S3Offloader
+ */
 
 namespace S3Offloader;
 
@@ -25,6 +30,9 @@ class Plugin {
 		add_filter( 'wp_get_attachment_url', array( Uploader::class, 'filter_attachment_url' ), 10, 2 );
 		add_filter( 'wp_get_attachment_image_src', array( Uploader::class, 'filter_attachment_image_src' ), 10, 4 );
 		add_filter( 'wp_calculate_image_srcset', array( Uploader::class, 'filter_image_srcset' ), 10, 5 );
+		add_filter( 'image_downsize', array( Uploader::class, 'filter_image_downsize' ), 10, 3 );
+		add_filter( 'wp_prepare_attachment_for_js', array( Uploader::class, 'filter_attachment_for_js' ), 10, 3 );
+		add_filter( 'the_content', array( Uploader::class, 'filter_content_urls' ), 10, 1 );
 
 		if ( defined( 'WP_CLI' ) ) {
 			\WP_CLI::add_command( 's3-offloader', CLI\Commands::class );

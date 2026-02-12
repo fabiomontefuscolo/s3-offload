@@ -263,4 +263,99 @@ class Uploader {
 
 		return str_replace( $base_dir . '/', '', $file );
 	}
+
+
+	public static function filter_image_downsize( $downsize, $attachment_id, $size ) {
+		// Check if this attachment is offloaded to S3.
+		$s3_url = get_post_meta( $attachment_id, '_s3_offloader_url', true );
+		if ( empty( $s3_url ) ) {
+			return $downsize;
+		}
+
+		// Get image metadata.
+		$meta = wp_get_attachment_metadata( $attachment_id );
+		if ( ! $meta ) {
+			return $downsize;
+		}
+
+		// Handle array size (width, height).
+		if ( is_array( $size ) ) {
+			return $downsize;
+		}
+
+		// Get the appropriate size data.
+		if ( 'full' === $size || ! isset( $meta['sizes'][ $size ] ) ) {
+			$width  = $meta['width'] ?? 0;
+			$height = $meta['height'] ?? 0;
+			$url    = self::convert_url_to_s3( wp_get_attachment_url( $attachment_id ), $attachment_id );
+			return array( $url, $width, $height, false );
+		}
+
+		$size_data = $meta['sizes'][ $size ];
+		$url       = wp_get_attachment_url( $attachment_id );
+		$url       = str_replace( basename( $url ), $size_data['file'], $url );
+		$url       = self::convert_url_to_s3( $url, $attachment_id );
+
+		return array( $url, $size_data['width'], $size_data['height'], true );
+	}
+
+
+	public static function filter_attachment_for_js( $response, $attachment, $meta ) {
+		$attachment_id = $attachment->ID;
+
+		// Check if this attachment is offloaded to S3.
+		$s3_url = get_post_meta( $attachment_id, '_s3_offloader_url', true );
+		if ( empty( $s3_url ) ) {
+			return $response;
+		}
+
+		// Update the main URL.
+		if ( isset( $response['url'] ) ) {
+			$response['url'] = self::convert_url_to_s3( $response['url'], $attachment_id );
+		}
+
+		// Update all size URLs.
+		if ( isset( $response['sizes'] ) && is_array( $response['sizes'] ) ) {
+			foreach ( $response['sizes'] as $size_name => $size_data ) {
+				if ( isset( $size_data['url'] ) ) {
+					$response['sizes'][ $size_name ]['url'] = self::convert_url_to_s3( $size_data['url'], $attachment_id );
+				}
+			}
+		}
+
+		return $response;
+	}
+
+
+	public static function filter_content_urls( $content ) {
+		// Get upload directory info.
+		$uploads  = wp_upload_dir();
+		$base_url = $uploads['baseurl'];
+
+		// Build a regex pattern to match upload URLs.
+		$pattern = '#' . preg_quote( $base_url, '#' ) . '/[^\s\'"]+#';
+
+		// Find all upload URLs in content.
+		preg_match_all( $pattern, $content, $matches );
+
+		if ( empty( $matches[0] ) ) {
+			return $content;
+		}
+
+		// Try to convert each URL to S3.
+		foreach ( $matches[0] as $url ) {
+			// Try to get attachment ID from URL.
+			$attachment_id = attachment_url_to_postid( $url );
+
+			if ( $attachment_id ) {
+				$s3_url = get_post_meta( $attachment_id, '_s3_offloader_url', true );
+				if ( ! empty( $s3_url ) ) {
+					$s3_converted_url = self::convert_url_to_s3( $url, $attachment_id );
+					$content          = str_replace( $url, $s3_converted_url, $content );
+				}
+			}
+		}
+
+		return $content;
+	}
 }
