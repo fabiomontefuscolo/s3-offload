@@ -5,12 +5,13 @@
  * Version: 1.0.0
  * Author: Fabio Montefuscolo<fabio.montefuscolo@gmail.com>
  * Requires PHP: 7.4
+ *
+ * @package S3Offloader
  */
 
 namespace S3Offloader;
 
-if ( ! defined( 'ABSPATH' ) )
-{
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
@@ -20,6 +21,9 @@ define( 'S3_OFFLOADER_URL', \plugin_dir_url( __FILE__ ) );
 
 require_once S3_OFFLOADER_PATH . 'vendor/autoload.php';
 
-add_action( 'plugins_loaded', function() {
-	Plugin::get_instance();
-} );
+add_action(
+	'plugins_loaded',
+	function () {
+		Plugin::get_instance();
+	}
+);

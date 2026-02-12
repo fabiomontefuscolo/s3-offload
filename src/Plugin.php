@@ -1,5 +1,5 @@
 <?php
-/*
+/**
  * Main plugin class for S3 Offloader.
  *
  * @package S3Offloader
@@ -9,14 +9,30 @@ namespace S3Offloader;
 
 use S3Offloader\Admin\SettingsPage;
 
+/**
+ * Main Plugin class.
+ */
 class Plugin {
 
+	/**
+	 * Plugin singleton instance.
+	 *
+	 * @var Plugin|null
+	 */
 	private static $instance = null;
 
+	/**
+	 * Private constructor to enforce singleton pattern.
+	 */
 	private function __construct() {
 		$this->init_hooks();
 	}
 
+	/**
+	 * Get the singleton instance of the plugin.
+	 *
+	 * @return Plugin The plugin instance.
+	 */
 	public static function get_instance() {
 		if ( null === self::$instance ) {
 			self::$instance = new self();
@@ -24,6 +40,9 @@ class Plugin {
 		return self::$instance;
 	}
 
+	/**
+	 * Initialize plugin hooks and filters.
+	 */
 	private function init_hooks() {
 		add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
 		add_filter( 'wp_generate_attachment_metadata', array( Uploader::class, 'upload_after_metadata_generation' ), 10, 2 );
@@ -39,6 +58,9 @@ class Plugin {
 		}
 	}
 
+	/**
+	 * Add plugin settings page to WordPress admin menu.
+	 */
 	public function add_admin_menu() {
 		add_options_page(
 			__( 'S3 Offloader Settings', 's3-offloader' ),

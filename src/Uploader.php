@@ -1,30 +1,45 @@
 <?php
+/**
+ * S3 uploader class.
+ *
+ * @package S3Offloader
+ */
 
 namespace S3Offloader;
 
 use Aws\S3\S3Client;
 use Aws\Exception\AwsException;
 
-
+/**
+ * Handles uploading and filtering of media files to S3.
+ */
 class Uploader {
 
-
-
+	/**
+	 * S3 client instance.
+	 *
+	 * @var S3Client|null
+	 */
 	private static $s3_client = null;
 
-
+	/**
+	 * Get or initialize S3 client.
+	 *
+	 * @return S3Client|false S3 client instance or false on failure.
+	 */
 	private static function get_s3_client() {
 		if ( null !== self::$s3_client ) {
 			return self::$s3_client;
 		}
 
-		$access_key     = PluginConfig::getAccessKey();
-		$secret_key     = PluginConfig::getSecretKey();
-		$region         = PluginConfig::getRegion();
-		$endpoint       = PluginConfig::getEndpoint();
-		$use_path_style = PluginConfig::getUsePathStyle();
+		$access_key     = PluginConfig::get_access_key();
+		$secret_key     = PluginConfig::get_secret_key();
+		$region         = PluginConfig::get_region();
+		$endpoint       = PluginConfig::get_endpoint();
+		$use_path_style = PluginConfig::get_use_path_style();
 
 		if ( empty( $access_key ) || empty( $secret_key ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
 			trigger_error(
 				'S3 Offloader: AWS credentials are not set.',
 				E_USER_WARNING
@@ -54,33 +69,47 @@ class Uploader {
 
 			return self::$s3_client;
 		} catch ( AwsException $e ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 			error_log( 'S3 Offloader: Failed to initialize S3 client: ' . $e->getMessage() );
 			return false;
 		}
 	}
 
-
+	/**
+	 * Upload file to S3 after WordPress generates attachment metadata.
+	 *
+	 * @param array $metadata      Attachment metadata.
+	 * @param int   $attachment_id Attachment ID.
+	 * @return array Unmodified metadata.
+	 */
 	public static function upload_after_metadata_generation( $metadata, $attachment_id ) {
 		self::upload_to_s3( $attachment_id );
 		return $metadata;
 	}
 
-
+	/**
+	 * Upload an attachment and its thumbnails to S3.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 * @return bool True on success, false on failure.
+	 */
 	public static function upload_to_s3( $attachment_id ) {
 		$s3_client = self::get_s3_client();
 		if ( ! $s3_client ) {
 			return false;
 		}
 
-		$bucket = PluginConfig::getBucket();
+		$bucket = PluginConfig::get_bucket();
 		if ( empty( $bucket ) ) {
 			return false;
 		}
 
 		$file = get_attached_file( $attachment_id );
 		if ( ! file_exists( $file ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error -- Intentional for debugging.
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Error message context.
 			trigger_error(
-				'S3 Offloader: File does not exist for attachment ID ' . $attachment_id,
+				'S3 Offloader: File does not exist for attachment ID ' . esc_html( $attachment_id ),
 				E_USER_WARNING
 			);
 			return false;
@@ -88,13 +117,15 @@ class Uploader {
 
 		$key          = self::get_s3_key( $attachment_id );
 		$mime_type    = get_post_mime_type( $attachment_id );
-		$delete_local = PluginConfig::getDeleteLocal();
+		$delete_local = PluginConfig::get_delete_local();
 
 		// Upload main file.
 		$s3_url = self::upload_file_to_s3( $s3_client, $bucket, $file, $key, $mime_type );
 		if ( ! $s3_url ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error -- Intentional for debugging.
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Error message context.
 			trigger_error(
-				'S3 Offloader: Failed to upload main file for attachment ID ' . $attachment_id,
+				'S3 Offloader: Failed to upload main file for attachment ID ' . esc_html( $attachment_id ),
 				E_USER_WARNING
 			);
 			return false;
@@ -108,13 +139,23 @@ class Uploader {
 
 		// Delete local main file if option is enabled.
 		if ( $delete_local ) {
+			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink
 			@unlink( $file );
 		}
 
 		return true;
 	}
 
-
+	/**
+	 * Upload a single file to S3.
+	 *
+	 * @param S3Client $s3_client S3 client instance.
+	 * @param string   $bucket    S3 bucket name.
+	 * @param string   $file_path Local file path.
+	 * @param string   $key       S3 object key.
+	 * @param string   $mime_type File MIME type.
+	 * @return string|false S3 URL on success, false on failure.
+	 */
 	private static function upload_file_to_s3( $s3_client, $bucket, $file_path, $key, $mime_type ) {
 		if ( ! file_exists( $file_path ) ) {
 			return false;
@@ -133,12 +174,21 @@ class Uploader {
 
 			return $result['ObjectURL'];
 		} catch ( AwsException $e ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 			error_log( 'S3 Offloader: Failed to upload file ' . $file_path . ': ' . $e->getMessage() );
 			return false;
 		}
 	}
 
-
+	/**
+	 * Upload all thumbnails for an attachment to S3.
+	 *
+	 * @param S3Client $s3_client    S3 client instance.
+	 * @param string   $bucket       S3 bucket name.
+	 * @param int      $attachment_id Attachment ID.
+	 * @param string   $main_file    Path to main file.
+	 * @param string   $main_key     S3 key for main file.
+	 */
 	private static function upload_thumbnails( $s3_client, $bucket, $attachment_id, $main_file, $main_key ) {
 		$metadata = wp_get_attachment_metadata( $attachment_id );
 		if ( empty( $metadata['sizes'] ) ) {
@@ -147,7 +197,7 @@ class Uploader {
 
 		$upload_dir   = dirname( $main_file );
 		$base_key     = dirname( $main_key );
-		$delete_local = PluginConfig::getDeleteLocal();
+		$delete_local = PluginConfig::get_delete_local();
 		$default_mime = get_post_mime_type( $attachment_id );
 
 		foreach ( $metadata['sizes'] as $size_name => $size_data ) {
@@ -158,12 +208,19 @@ class Uploader {
 			$s3_url = self::upload_file_to_s3( $s3_client, $bucket, $thumbnail_file, $thumbnail_key, $thumbnail_mime );
 
 			if ( $s3_url && $delete_local ) {
+				// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink
 				@unlink( $thumbnail_file );
 			}
 		}
 	}
 
-
+	/**
+	 * Filter attachment URL to return S3 URL.
+	 *
+	 * @param string $url           Original attachment URL.
+	 * @param int    $attachment_id Attachment ID.
+	 * @return string Modified or original URL.
+	 */
 	public static function filter_attachment_url( $url, $attachment_id ) {
 		$s3_url = get_post_meta( $attachment_id, '_s3_offloader_url', true );
 		if ( ! empty( $s3_url ) ) {
@@ -172,8 +229,20 @@ class Uploader {
 		return $url;
 	}
 
-
+	/**
+	 * Filter attachment image src to use S3 URLs.
+	 *
+	 * @param array|false  $image         Image data array or false.
+	 * @param int          $attachment_id Attachment ID.
+	 * @param string|array $size          Image size (unused but required by WordPress hook).
+	 * @param bool         $icon          Whether to use icon (unused but required by WordPress hook).
+	 * @return array|false Modified image data or original.
+	 */
 	public static function filter_attachment_image_src( $image, $attachment_id, $size, $icon ) {
+		// Unused parameters required by WordPress filter hook.
+		// phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		unset( $size, $icon );
+
 		if ( ! $image ) {
 			return $image;
 		}
@@ -184,7 +253,16 @@ class Uploader {
 		return $image;
 	}
 
-
+	/**
+	 * Filter image srcset to use S3 URLs.
+	 *
+	 * @param array  $sources      Srcset sources.
+	 * @param array  $size_array   Image size array.
+	 * @param string $image_src    Image source URL.
+	 * @param array  $image_meta   Image metadata.
+	 * @param int    $attachment_id Attachment ID.
+	 * @return array Modified sources.
+	 */
 	public static function filter_image_srcset( $sources, $size_array, $image_src, $image_meta, $attachment_id ) {
 		if ( ! $sources ) {
 			return $sources;
@@ -197,7 +275,13 @@ class Uploader {
 		return $sources;
 	}
 
-
+	/**
+	 * Convert a local URL to S3 URL.
+	 *
+	 * @param string $url           Local URL.
+	 * @param int    $attachment_id Attachment ID.
+	 * @return string S3 URL or original URL.
+	 */
 	private static function convert_url_to_s3( $url, $attachment_id ) {
 		// Check if this attachment is offloaded to S3.
 		$s3_url = get_post_meta( $attachment_id, '_s3_offloader_url', true );
@@ -209,10 +293,10 @@ class Uploader {
 		$uploads     = wp_upload_dir();
 		$base_url    = $uploads['baseurl'];
 		$s3_base_url = self::get_s3_base_url(
-			PluginConfig::getBucket(),
-			PluginConfig::getEndpoint(),
-			PluginConfig::getRegion(),
-			PluginConfig::getUsePathStyle()
+			PluginConfig::get_bucket(),
+			PluginConfig::get_endpoint(),
+			PluginConfig::get_region(),
+			PluginConfig::get_use_path_style()
 		);
 
 		if ( empty( $s3_base_url ) ) {
@@ -223,7 +307,15 @@ class Uploader {
 		return str_replace( $base_url, $s3_base_url, $url );
 	}
 
-
+	/**
+	 * Get S3 base URL based on configuration.
+	 *
+	 * @param string $bucket         S3 bucket name.
+	 * @param string $endpoint       Custom endpoint.
+	 * @param string $region         AWS region.
+	 * @param bool   $use_path_style Whether to use path-style URLs.
+	 * @return string S3 base URL.
+	 */
 	private static function get_s3_base_url(
 		$bucket,
 		$endpoint,
@@ -254,8 +346,14 @@ class Uploader {
 		return 'https://' . $bucket . '.s3.' . $region . '.amazonaws.com';
 	}
 
-
-	// In short, strips /wp-content/uploads/ from the file path to get the S3 key.
+	/**
+	 * Get S3 key for an attachment.
+	 *
+	 * Strips /wp-content/uploads/ from the file path to get the S3 key.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 * @return string S3 key.
+	 */
 	private static function get_s3_key( $attachment_id ) {
 		$file     = get_attached_file( $attachment_id );
 		$uploads  = wp_upload_dir();
@@ -264,7 +362,14 @@ class Uploader {
 		return str_replace( $base_dir . '/', '', $file );
 	}
 
-
+	/**
+	 * Filter image downsize to use S3 URLs.
+	 *
+	 * @param bool|array   $downsize      Current downsize value.
+	 * @param int          $attachment_id Attachment ID.
+	 * @param string|array $size          Image size.
+	 * @return bool|array Modified downsize value.
+	 */
 	public static function filter_image_downsize( $downsize, $attachment_id, $size ) {
 		// Check if this attachment is offloaded to S3.
 		$s3_url = get_post_meta( $attachment_id, '_s3_offloader_url', true );
@@ -299,8 +404,19 @@ class Uploader {
 		return array( $url, $size_data['width'], $size_data['height'], true );
 	}
 
-
+	/**
+	 * Filter attachment data for JS (media library).
+	 *
+	 * @param array    $response   Response data.
+	 * @param \WP_Post $attachment Attachment object.
+	 * @param array    $meta       Attachment metadata (unused but required by WordPress hook).
+	 * @return array Modified response.
+	 */
 	public static function filter_attachment_for_js( $response, $attachment, $meta ) {
+		// Unused parameter required by WordPress filter hook.
+		// phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		unset( $meta );
+
 		$attachment_id = $attachment->ID;
 
 		// Check if this attachment is offloaded to S3.
@@ -326,7 +442,12 @@ class Uploader {
 		return $response;
 	}
 
-
+	/**
+	 * Filter content URLs to use S3 URLs.
+	 *
+	 * @param string $content Post content.
+	 * @return string Modified content.
+	 */
 	public static function filter_content_urls( $content ) {
 		// Get upload directory info.
 		$uploads  = wp_upload_dir();

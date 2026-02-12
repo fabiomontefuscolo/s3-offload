@@ -1,10 +1,18 @@
 <?php
+/**
+ * WP-CLI commands for S3 Offloader.
+ *
+ * @package S3Offloader
+ */
+
 namespace S3Offloader\CLI;
 
 use S3Offloader\Uploader;
 use WP_CLI;
 
-
+/**
+ * WP-CLI commands handler for S3 Offloader plugin.
+ */
 class Commands {
 	/**
 	 * Sync existing media files to S3
@@ -31,6 +39,7 @@ class Commands {
 
 		WP_CLI::log( 'Starting S3 sync...' );
 
+		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 		$attachments = get_posts(
 			array(
 				'post_type'      => 'attachment',
@@ -91,6 +100,7 @@ class Commands {
 		WP_CLI::log( 'Testing S3 connection...' );
 
 		$test_file = wp_upload_dir()['path'] . '/s3-test-' . time() . '.txt';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
 		file_put_contents( $test_file, 'S3 Offloader test file' );
 
 		$attachment_id = wp_insert_attachment(
@@ -114,6 +124,7 @@ class Commands {
 			// Clean up.
 			wp_delete_attachment( $attachment_id, true );
 			if ( file_exists( $test_file ) ) {
+				// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink
 				@unlink( $test_file );
 			}
 		} else {
@@ -121,6 +132,7 @@ class Commands {
 
 			wp_delete_attachment( $attachment_id, true );
 			if ( file_exists( $test_file ) ) {
+				// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink
 				@unlink( $test_file );
 			}
 		}

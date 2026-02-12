@@ -1,11 +1,22 @@
 <?php
+/**
+ * Settings page for S3 Offloader.
+ *
+ * @package S3Offloader
+ */
 
 namespace S3Offloader\Admin;
 
 use S3Offloader\PluginConfig;
 
+/**
+ * Admin settings page handler.
+ */
 class SettingsPage {
 
+	/**
+	 * Render the settings page.
+	 */
 	public static function render_page() {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
@@ -18,13 +29,13 @@ class SettingsPage {
 			echo '<div class="notice notice-success"><p>' . esc_html__( 'Settings saved.', 's3-offloader' ) . '</p></div>';
 		}
 
-		$access_key     = PluginConfig::getAccessKey() ?? '';
-		$secret_key     = PluginConfig::getSecretKey() ?? '';
-		$bucket         = PluginConfig::getBucket() ?? '';
-		$region         = PluginConfig::getRegion();
-		$endpoint       = PluginConfig::getEndpoint();
-		$use_path_style = PluginConfig::getUsePathStyle();
-		$delete_local   = PluginConfig::getDeleteLocal();
+		$access_key     = PluginConfig::get_access_key() ?? '';
+		$secret_key     = PluginConfig::get_secret_key() ?? '';
+		$bucket         = PluginConfig::get_bucket() ?? '';
+		$region         = PluginConfig::get_region();
+		$endpoint       = PluginConfig::get_endpoint();
+		$use_path_style = PluginConfig::get_use_path_style();
+		$delete_local   = PluginConfig::get_delete_local();
 		?>
 		<div class="wrap">
 			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
@@ -102,13 +113,19 @@ class SettingsPage {
 		<?php
 	}
 
+	/**
+	 * Save settings from form submission.
+	 */
 	private static function save_settings() {
-		update_option( 's3_offloader_access_key', sanitize_text_field( $_POST['s3_offloader_access_key'] ?? '' ) );
-		update_option( 's3_offloader_secret_key', sanitize_text_field( $_POST['s3_offloader_secret_key'] ?? '' ) );
-		update_option( 's3_offloader_bucket', sanitize_text_field( $_POST['s3_offloader_bucket'] ?? '' ) );
-		update_option( 's3_offloader_region', sanitize_text_field( $_POST['s3_offloader_region'] ?? 'us-east-1' ) );
-		update_option( 's3_offloader_endpoint', sanitize_text_field( $_POST['s3_offloader_endpoint'] ?? '' ) );
+		// Nonce is already verified in render_page() before calling this method.
+		// phpcs:disable WordPress.Security.NonceVerification.Missing
+		update_option( 's3_offloader_access_key', sanitize_text_field( wp_unslash( $_POST['s3_offloader_access_key'] ?? '' ) ) );
+		update_option( 's3_offloader_secret_key', sanitize_text_field( wp_unslash( $_POST['s3_offloader_secret_key'] ?? '' ) ) );
+		update_option( 's3_offloader_bucket', sanitize_text_field( wp_unslash( $_POST['s3_offloader_bucket'] ?? '' ) ) );
+		update_option( 's3_offloader_region', sanitize_text_field( wp_unslash( $_POST['s3_offloader_region'] ?? 'us-east-1' ) ) );
+		update_option( 's3_offloader_endpoint', sanitize_text_field( wp_unslash( $_POST['s3_offloader_endpoint'] ?? '' ) ) );
 		update_option( 's3_offloader_use_path_style', isset( $_POST['s3_offloader_use_path_style'] ) );
 		update_option( 's3_offloader_delete_local', isset( $_POST['s3_offloader_delete_local'] ) );
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
 	}
 }
