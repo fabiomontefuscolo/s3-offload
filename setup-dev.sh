@@ -53,7 +53,7 @@ _aws () {
         localstack aws --endpoint-url=http://localhost:4566 "$@"
 }
 _aws --endpoint-url=http://localhost:4566 s3 mb s3://${S3_OFFLOADER_BUCKET} --region ${AWS_DEFAULT_REGION}
-_aws s3api put-bucket-acl --bucket wordpress-media --acl public-read
+_aws s3api put-bucket-acl --bucket "${S3_OFFLOADER_BUCKET}" --acl public-read
 
 echo ""
 echo "Configuring S3 Offloader for LocalStack..."
@@ -72,6 +72,10 @@ docker-compose exec db mysql -u root -prootpassword -e "GRANT ALL PRIVILEGES ON 
 echo ""
 echo "Installing WordPress test suite..."
 docker-compose exec wordpress bash /var/www/html/wp-content/plugins/s3-offloader/bin/install-wp-tests-docker.sh wordpress_test wordpress wordpress db latest
+
+TEST_S3_OFFLOADER_BUCKET="test-bucket"
+_aws --endpoint-url=http://localhost:4566 s3 mb s3://${TEST_S3_OFFLOADER_BUCKET} --region ${AWS_DEFAULT_REGION}
+_aws s3api put-bucket-acl --bucket "${TEST_S3_OFFLOADER_BUCKET}" --acl public-read
 
 echo ""
 echo "=========================================="
