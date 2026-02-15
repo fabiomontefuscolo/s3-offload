@@ -22,16 +22,13 @@ class Uploader {
 	 */
 	private static $s3_client = null;
 
-	/**
-	 * Get or initialize S3 client.
-	 *
-	 * @return S3Client|false S3 client instance or false on failure.
-	 */
-	private static function get_s3_client() {
-		if ( null !== self::$s3_client ) {
-			return self::$s3_client;
-		}
 
+	/**
+	 * Get S3 client configuration array.
+	 *
+	 * @return array|null S3 client configuration or null if credentials are missing.
+	 */
+	public static function get_s3_config(): array|null {
 		$access_key     = PluginConfig::get_access_key();
 		$secret_key     = PluginConfig::get_secret_key();
 		$region         = PluginConfig::get_region();
@@ -44,27 +41,42 @@ class Uploader {
 				'S3 Offloader: AWS credentials are not set.',
 				E_USER_WARNING
 			);
-			return false;
+			return null;
 		}
 
+		$config = array(
+			'version'     => 'latest',
+			'region'      => $region,
+			'credentials' => array(
+				'key'    => $access_key,
+				'secret' => $secret_key,
+			),
+		);
+
+		if ( ! empty( $endpoint ) ) {
+			$config['endpoint'] = $endpoint;
+		}
+
+		if ( $use_path_style ) {
+			$config['use_path_style_endpoint'] = true;
+		}
+
+		return $config;
+	}
+
+	/**
+	 * Get or initialize S3 client.
+	 *
+	 * @return S3Client|false S3 client instance or false on failure.
+	 */
+	public static function get_s3_client() {
+		if ( null !== self::$s3_client ) {
+			return self::$s3_client;
+		}
+
+		$config = self::get_s3_config();
+
 		try {
-			$config = array(
-				'version'     => 'latest',
-				'region'      => $region,
-				'credentials' => array(
-					'key'    => $access_key,
-					'secret' => $secret_key,
-				),
-			);
-
-			if ( ! empty( $endpoint ) ) {
-				$config['endpoint'] = $endpoint;
-			}
-
-			if ( $use_path_style ) {
-				$config['use_path_style_endpoint'] = true;
-			}
-
 			self::$s3_client = new S3Client( $config );
 
 			return self::$s3_client;

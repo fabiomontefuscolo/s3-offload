@@ -26,7 +26,121 @@ class Test_Uploader extends WP_UnitTestCase {
 		S3Offloader\PluginConfig::set_delete_local( false );
 	}
 
+	public function tear_down(): void {
+		parent::tear_down();
+		self::set_private_class_property( S3Offloader\Uploader::class, 's3_client', null );
+	}
 
+	/**
+	 * Test get_s3_config returns expected configuration array.
+	 *
+	 * @return void
+	 */
+	public function test_get_s3_config() {
+		$config = S3Offloader\Uploader::get_s3_config();
+
+		$expected_config = array(
+			'version'                 => 'latest',
+			'region'                  => S3Offloader\PluginConfig::get_region(),
+			'endpoint'                => S3Offloader\PluginConfig::get_endpoint(),
+			'use_path_style_endpoint' => S3Offloader\PluginConfig::get_use_path_style(),
+			'credentials'             => array(
+				'key'    => S3Offloader\PluginConfig::get_access_key(),
+				'secret' => S3Offloader\PluginConfig::get_secret_key(),
+			),
+		);
+
+		$this->assertIsArray( $config );
+		$this->assertEquals( $expected_config, $config );
+	}
+
+	/**
+	 * Test get_s3_config with access key and secret key set to empty strings.
+	 *
+	 * @return void
+	 */
+	public function test_get_s3_config_with_empty_credentials() {
+		S3Offloader\PluginConfig::set_access_key( '' );
+		S3Offloader\PluginConfig::set_secret_key( '' );
+
+		$this->setExpectedException( 'PHPUnit_Framework_Error_Warning' );
+
+		$config = S3Offloader\Uploader::get_s3_config();
+
+		$this->assertEquals( null, $config );
+	}
+
+
+	/**
+	 * Test get_s3_config with empty endpoint to ensure it defaults to AWS S3.
+	 *
+	 * @return void
+	 */
+	public function test_get_s3_config_with_empty_endpoint() {
+		S3Offloader\PluginConfig::set_endpoint( '' );
+
+		$config = S3Offloader\Uploader::get_s3_config();
+
+		$expected_config = array(
+			'version'                 => 'latest',
+			'region'                  => S3Offloader\PluginConfig::get_region(),
+			'use_path_style_endpoint' => S3Offloader\PluginConfig::get_use_path_style(),
+			'credentials'             => array(
+				'key'    => S3Offloader\PluginConfig::get_access_key(),
+				'secret' => S3Offloader\PluginConfig::get_secret_key(),
+			),
+		);
+
+		$this->assertIsArray( $config );
+		$this->assertEquals( $expected_config, $config );
+	}
+
+
+	/**
+	 * Test get_s3_config with path-style endpoint disabled
+	 *
+	 * @return void
+	 */
+	public function test_get_s3_config_with_virtual_hosted_style() {
+		S3Offloader\PluginConfig::set_use_path_style( false );
+
+		$config = S3Offloader\Uploader::get_s3_config();
+
+		$expected_config = array(
+			'version'     => 'latest',
+			'region'      => S3Offloader\PluginConfig::get_region(),
+			'endpoint'    => S3Offloader\PluginConfig::get_endpoint(),
+			'credentials' => array(
+				'key'    => S3Offloader\PluginConfig::get_access_key(),
+				'secret' => S3Offloader\PluginConfig::get_secret_key(),
+			),
+		);
+
+		$this->assertIsArray( $config );
+		$this->assertEquals( $expected_config, $config );
+	}
+
+	/**
+	 * Test get_s3_client returns an instance of S3Client and is cached.
+	 *
+	 * @return void
+	 */
+	public function test_get_s3_client() {
+		$client = S3Offloader\Uploader::get_s3_client();
+
+		$this->assertInstanceOf( \Aws\S3\S3Client::class, $client );
+		$this->assertTrue( $client === S3Offloader\Uploader::get_s3_client() );
+	}
+
+
+	public function test_get_s3_client_with_empty_credentials() {
+		S3Offloader\PluginConfig::set_access_key( '' );
+		S3Offloader\PluginConfig::set_secret_key( '' );
+
+		$this->setExpectedException( 'PHPUnit_Framework_Error_Warning' );
+
+		$client = S3Offloader\Uploader::get_s3_client();
+	}
 
 	/**
 	 * Test get_s3_base_url using virtual-hosted-style endpoint.
@@ -249,5 +363,19 @@ class Test_Uploader extends WP_UnitTestCase {
 		$key = S3Offloader\Uploader::get_s3_key( $attachment_id );
 		$this->assertNotEmpty( $key );
 		$this->assertStringContainsString( '.jpg', $key );
+	}
+
+	/**
+	 * Helper method to set private class property value using reflection.
+	 *
+	 * @param object $object The object instance to modify.
+	 * @param string $property_name The name of the private property to set.
+	 * @param mixed  $value The value to assign to the property.
+	 */
+	private static function set_private_class_property( $class, $property_name, $value ) {
+		$reflection = new ReflectionClass( $class );
+		$property   = $reflection->getProperty( $property_name );
+		$property->setAccessible( true );
+		$property->setValue( $class, $value );
 	}
 }
