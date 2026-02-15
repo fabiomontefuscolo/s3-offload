@@ -5,3 +5,8 @@ composer.lock
 .DS_Store
 *.log
 localstack_data/
+
+# Test coverage reports
+/coverage-report/
+coverage.xml
+.phpunit.result.cache
