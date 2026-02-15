@@ -36,6 +36,7 @@ class SettingsPage {
 		$endpoint       = PluginConfig::get_endpoint();
 		$use_path_style = PluginConfig::get_use_path_style();
 		$delete_local   = PluginConfig::get_delete_local();
+		$base_prefix    = PluginConfig::get_base_prefix();
 		?>
 		<div class="wrap">
 			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
@@ -97,6 +98,15 @@ class SettingsPage {
 					</tr>
 					<tr>
 						<th scope="row">
+							<label for="s3_offloader_base_prefix"><?php esc_html_e( 'Base Directory Prefix', 's3-offloader' ); ?></label>
+						</th>
+						<td>
+							<input type="text" id="s3_offloader_base_prefix" name="s3_offloader_base_prefix" value="<?php echo esc_attr( $base_prefix ); ?>" class="regular-text" />
+							<p class="description"><?php esc_html_e( 'Optional prefix for S3 keys (e.g., "production", "site-1/uploads"). Leave empty for no prefix.', 's3-offloader' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row">
 							<?php esc_html_e( 'Delete Local Files', 's3-offloader' ); ?>
 						</th>
 						<td>
@@ -124,6 +134,7 @@ class SettingsPage {
 		update_option( 's3_offloader_bucket', sanitize_text_field( wp_unslash( $_POST['s3_offloader_bucket'] ?? '' ) ) );
 		update_option( 's3_offloader_region', sanitize_text_field( wp_unslash( $_POST['s3_offloader_region'] ?? 'us-east-1' ) ) );
 		update_option( 's3_offloader_endpoint', sanitize_text_field( wp_unslash( $_POST['s3_offloader_endpoint'] ?? '' ) ) );
+		update_option( 's3_offloader_base_prefix', sanitize_text_field( wp_unslash( $_POST['s3_offloader_base_prefix'] ?? '' ) ) );
 		update_option( 's3_offloader_use_path_style', isset( $_POST['s3_offloader_use_path_style'] ) );
 		update_option( 's3_offloader_delete_local', isset( $_POST['s3_offloader_delete_local'] ) );
 		// phpcs:enable WordPress.Security.NonceVerification.Missing

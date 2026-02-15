@@ -316,7 +316,7 @@ class Uploader {
 	 * @param bool   $use_path_style Whether to use path-style URLs.
 	 * @return string S3 base URL.
 	 */
-	private static function get_s3_base_url(
+	public static function get_s3_base_url(
 		$bucket,
 		$endpoint,
 		$region,
@@ -327,29 +327,36 @@ class Uploader {
 			return '';
 		}
 
-		// If custom endpoint is set, use it.
+		$base_url = '';
+
 		if ( ! empty( $endpoint ) ) {
-			// Remove protocol and trailing slash.
 			$endpoint = preg_replace( '#^https?://#', '', $endpoint );
 			$endpoint = rtrim( $endpoint, '/' );
 
-			// For path-style endpoints (like LocalStack).
 			if ( $use_path_style ) {
-				return 'http://' . $endpoint . '/' . $bucket;
+				$base_url = 'http://' . $endpoint . '/' . $bucket;
+			} else {
+				$base_url = 'http://' . $bucket . '.' . $endpoint;
 			}
-
-			// For virtual-hosted-style.
-			return 'http://' . $bucket . '.' . $endpoint;
+		} else {
+			$base_url = 'https://' . $bucket . '.s3.' . $region . '.amazonaws.com';
 		}
 
-		// Default AWS S3 URL structure.
-		return 'https://' . $bucket . '.s3.' . $region . '.amazonaws.com';
+		// Append custom base prefix if configured.
+		$custom_prefix = PluginConfig::get_base_prefix();
+		if ( ! empty( $custom_prefix ) ) {
+			$custom_prefix = trim( $custom_prefix, '/' );
+			$base_url     .= '/' . $custom_prefix;
+		}
+
+		return $base_url;
 	}
 
 	/**
 	 * Get S3 key for an attachment.
 	 *
 	 * Strips /wp-content/uploads/ from the file path to get the S3 key.
+	 * Optionally prefixes with a custom base directory.
 	 *
 	 * @param int $attachment_id Attachment ID.
 	 * @return string S3 key.
@@ -359,7 +366,15 @@ class Uploader {
 		$uploads  = wp_upload_dir();
 		$base_dir = $uploads['basedir'];
 
-		return str_replace( $base_dir . '/', '', $file );
+		$key = str_replace( $base_dir . '/', '', $file );
+
+		$custom_prefix = PluginConfig::get_base_prefix();
+		if ( ! empty( $custom_prefix ) ) {
+			$custom_prefix = trim( $custom_prefix, '/' );
+			$key           = $custom_prefix . '/' . $key;
+		}
+
+		return $key;
 	}
 
 	/**
