@@ -8,7 +8,12 @@ docker-compose up --detach --wait
 
 echo ""
 echo "Installing Composer dependencies..."
+docker-compose exec wordpress git config --global --add safe.directory /var/www/html/wp-content/plugins/s3-offloader
 docker-compose exec wordpress composer install -d /var/www/html/wp-content/plugins/s3-offloader
+
+echo ""
+echo "Installing test dependencies..."
+docker-compose exec wordpress composer require --dev yoast/phpunit-polyfills:"^2.0" -d /var/www/html/wp-content/plugins/s3-offloader 2>&1 | grep -E "(Installing|Locking|Nothing to|already)" || true
 
 _wp () {
     docker-compose exec -u www-data -T wordpress wp "$@"
@@ -58,3 +63,28 @@ _wp option update s3_offloader_bucket "${S3_OFFLOADER_BUCKET}"
 _wp option update s3_offloader_region "${AWS_DEFAULT_REGION}"
 _wp option update s3_offloader_endpoint "http://localstack:4566"
 _wp option update s3_offloader_use_path_style "1"
+
+echo ""
+echo "Setting up test database..."
+docker-compose exec db mysql -u root -prootpassword -e "CREATE DATABASE IF NOT EXISTS wordpress_test;" 2>/dev/null || echo "Note: Test database may already exist"
+docker-compose exec db mysql -u root -prootpassword -e "GRANT ALL PRIVILEGES ON wordpress_test.* TO 'wordpress'@'%'; FLUSH PRIVILEGES;" 2>/dev/null
+
+echo ""
+echo "Installing WordPress test suite..."
+docker-compose exec wordpress bash /var/www/html/wp-content/plugins/s3-offloader/bin/install-wp-tests-docker.sh wordpress_test wordpress wordpress db latest
+
+echo ""
+echo "=========================================="
+echo "✓ Development environment ready!"
+echo "=========================================="
+echo ""
+echo "WordPress Admin: http://localhost:8080/wp-admin"
+echo "  Username: admin"
+echo "  Password: admin"
+echo ""
+echo "LocalStack S3: http://localhost:4566"
+echo "  Bucket: ${S3_OFFLOADER_BUCKET}"
+echo ""
+echo "To run tests:"
+echo "  docker-compose exec -w /var/www/html/wp-content/plugins/s3-offloader wordpress vendor/bin/phpunit"
+echo ""

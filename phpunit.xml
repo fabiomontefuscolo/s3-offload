@@ -7,7 +7,8 @@
     convertWarningsToExceptions="true">
     <testsuites>
         <testsuite name="S3 Offloader Test Suite">
-            <directory>./tests</directory>
+            <directory prefix="test-" suffix=".php">./tests</directory>
+            <exclude>./tests/test-sample.php</exclude>
         </testsuite>
     </testsuites>
     <filter>
