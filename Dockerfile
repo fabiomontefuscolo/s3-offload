@@ -9,6 +9,12 @@ RUN apt-get update && apt-get install -y \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
+# Install PCOV for code coverage
+RUN pecl install pcov \
+    && docker-php-ext-enable pcov \
+    && echo "pcov.enabled=1" >> /usr/local/etc/php/conf.d/pcov.ini \
+    && echo "pcov.directory=/var/www/html/wp-content/plugins/s3-offloader/src" >> /usr/local/etc/php/conf.d/pcov.ini
+
 ARG USER_ID=1000
 ARG GROUP_ID=1000
 
