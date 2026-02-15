@@ -361,7 +361,7 @@ class Uploader {
 	 * @param int $attachment_id Attachment ID.
 	 * @return string S3 key.
 	 */
-	private static function get_s3_key( $attachment_id ) {
+	public static function get_s3_key( $attachment_id ) {
 		$file     = get_attached_file( $attachment_id );
 		$uploads  = wp_upload_dir();
 		$base_dir = $uploads['basedir'];

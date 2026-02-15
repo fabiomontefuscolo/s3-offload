@@ -104,7 +104,7 @@ class Test_Uploader extends WP_UnitTestCase {
 
 		$this->assertGreaterThan( 0, $attachment_id );
 
-		$key = $this->invoke_private_method( 'S3Offloader\Uploader', 'get_s3_key', array( $attachment_id ) );
+		$key = S3Offloader\Uploader::get_s3_key( $attachment_id );
 		$this->assertNotEmpty( $key );
 		$this->assertStringContainsString( '.jpg', $key );
 
@@ -125,7 +125,7 @@ class Test_Uploader extends WP_UnitTestCase {
 
 		$this->assertGreaterThan( 0, $attachment_id );
 
-		$key = $this->invoke_private_method( 'S3Offloader\Uploader', 'get_s3_key', array( $attachment_id ) );
+		$key = S3Offloader\Uploader::get_s3_key( $attachment_id );
 		$this->assertNotEmpty( $key );
 		$this->assertStringStartsWith( 'production/', $key );
 		$this->assertStringContainsString( '.jpg', $key );
@@ -145,7 +145,7 @@ class Test_Uploader extends WP_UnitTestCase {
 
 		$this->assertGreaterThan( 0, $attachment_id );
 
-		$key = $this->invoke_private_method( 'S3Offloader\Uploader', 'get_s3_key', array( $attachment_id ) );
+		$key = S3Offloader\Uploader::get_s3_key( $attachment_id );
 		$this->assertNotEmpty( $key );
 		$this->assertStringStartsWith( 'staging/', $key );
 
@@ -166,7 +166,7 @@ class Test_Uploader extends WP_UnitTestCase {
 
 		$this->assertGreaterThan( 0, $attachment_id );
 
-		$key = $this->invoke_private_method( 'S3Offloader\Uploader', 'get_s3_key', array( $attachment_id ) );
+		$key = S3Offloader\Uploader::get_s3_key( $attachment_id );
 		$this->assertNotEmpty( $key );
 		$this->assertStringStartsWith( 'development/', $key );
 		$this->assertStringNotContainsString( '//', $key );
@@ -186,7 +186,7 @@ class Test_Uploader extends WP_UnitTestCase {
 
 		$this->assertGreaterThan( 0, $attachment_id );
 
-		$key = $this->invoke_private_method( 'S3Offloader\Uploader', 'get_s3_key', array( $attachment_id ) );
+		$key = S3Offloader\Uploader::get_s3_key( $attachment_id );
 		$this->assertNotEmpty( $key );
 		$this->assertStringStartsWith( 'site-1/uploads/', $key );
 		$this->assertStringContainsString( '.jpg', $key );
@@ -206,7 +206,7 @@ class Test_Uploader extends WP_UnitTestCase {
 
 		$this->assertGreaterThan( 0, $attachment_id );
 
-		$key = $this->invoke_private_method( 'S3Offloader\Uploader', 'get_s3_key', array( $attachment_id ) );
+		$key = S3Offloader\Uploader::get_s3_key( $attachment_id );
 		$this->assertNotEmpty( $key );
 		$this->assertStringStartsWith( 'test-env/', $key );
 		$this->assertStringNotContainsString( '//', $key );
@@ -226,7 +226,7 @@ class Test_Uploader extends WP_UnitTestCase {
 
 		$this->assertGreaterThan( 0, $attachment_id );
 
-		$key = $this->invoke_private_method( 'S3Offloader\Uploader', 'get_s3_key', array( $attachment_id ) );
+		$key = S3Offloader\Uploader::get_s3_key( $attachment_id );
 		$this->assertNotEmpty( $key );
 		$this->assertStringContainsString( '.jpg', $key );
 		$this->assertStringStartsNotWith( '/', $key );
@@ -246,24 +246,8 @@ class Test_Uploader extends WP_UnitTestCase {
 
 		$this->assertGreaterThan( 0, $attachment_id );
 
-		$key = $this->invoke_private_method( 'S3Offloader\Uploader', 'get_s3_key', array( $attachment_id ) );
+		$key = S3Offloader\Uploader::get_s3_key( $attachment_id );
 		$this->assertNotEmpty( $key );
 		$this->assertStringContainsString( '.jpg', $key );
-	}
-
-	/**
-	 * Invoke a private or protected method using reflection.
-	 *
-	 * @param string $class_name  Fully qualified class name.
-	 * @param string $method_name Method name to invoke.
-	 * @param array  $parameters  Method parameters.
-	 * @return mixed Method return value.
-	 */
-	private function invoke_private_method( $class_name, $method_name, $parameters = array() ) {
-		$reflection = new \ReflectionClass( $class_name );
-		$method     = $reflection->getMethod( $method_name );
-		$method->setAccessible( true );
-
-		return $method->invokeArgs( null, $parameters );
 	}
 }
