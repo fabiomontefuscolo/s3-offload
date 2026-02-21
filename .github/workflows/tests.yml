@@ -182,6 +182,9 @@ jobs:
           echo "  WordPress: ${{ matrix.wordpress }}"
           echo "  Test Suite Directory: $WP_TESTS_DIR"
 
+          # I was expecting the service to be resolved by name :(
+          sudo sed -i -e '/^127.0.0.1/s/$/ localstack' /etc/hosts
+
           # Run PHPUnit tests
           vendor/bin/phpunit --verbose
 
