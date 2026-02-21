@@ -27,5 +27,16 @@
     "allow-plugins": {
       "dealerdirect/phpcodesniffer-composer-installer": true
     }
+  },
+  "scripts": {
+    "test": "phpunit",
+    "test:coverage": "phpunit --coverage-html coverage --coverage-text",
+    "phpcs": "phpcs --warning-severity=0",
+    "phpcbf": "phpcbf",
+    "lint": "phplint",
+    "check": [
+      "@lint",
+      "@phpcs"
+    ]
   }
 }

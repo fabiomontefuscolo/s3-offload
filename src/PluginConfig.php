@@ -133,7 +133,7 @@ class PluginConfig {
 	 * @param bool $use_path_style Whether to use path-style endpoint.
 	 */
 	public static function set_use_path_style( bool $use_path_style ): void {
-		update_option( self::OPTION_USE_PATH_STYLE, $use_path_style === true );
+		update_option( self::OPTION_USE_PATH_STYLE, true === $use_path_style );
 	}
 
 	/**
@@ -174,7 +174,7 @@ class PluginConfig {
 	 * @param bool $delete_local Whether to delete local files after upload.
 	 */
 	public static function set_delete_local( bool $delete_local ): void {
-		update_option( self::OPTION_DELETE_LOCAL, $delete_local === true );
+		update_option( self::OPTION_DELETE_LOCAL, true === $delete_local );
 	}
 
 	/**

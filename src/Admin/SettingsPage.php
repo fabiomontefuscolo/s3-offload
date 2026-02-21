@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Settings page for S3 Offloader.
  *
@@ -148,8 +147,8 @@ class SettingsPage {
 	private static function save_settings() {
 		// Nonce is already verified in render_page() before calling this method.
 		// phpcs:disable WordPress.Security.NonceVerification.Missing
-		$s3_offloader_use_path_style = isset( $_POST[ self::FIELD_USE_PATH_STYLE ] ) && $_POST[ self::FIELD_USE_PATH_STYLE ] === '1';
-		$s3_offloader_delete_local   = isset( $_POST[ self::FIELD_DELETE_LOCAL ] ) && $_POST[ self::FIELD_DELETE_LOCAL ] === '1';
+		$s3_offloader_use_path_style = isset( $_POST[ self::FIELD_USE_PATH_STYLE ] ) && '1' === $_POST[ self::FIELD_USE_PATH_STYLE ];
+		$s3_offloader_delete_local   = isset( $_POST[ self::FIELD_DELETE_LOCAL ] ) && '1' === $_POST[ self::FIELD_DELETE_LOCAL ];
 
 		PluginConfig::set_access_key(
 			sanitize_text_field( wp_unslash( $_POST[ self::FIELD_ACCESS_KEY ] ?? '' ) )
