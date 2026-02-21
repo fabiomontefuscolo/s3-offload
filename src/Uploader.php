@@ -79,15 +79,8 @@ class Uploader {
 			return false;
 		}
 
-		try {
-			self::$s3_client = new S3Client( $config );
-
-			return self::$s3_client;
-		} catch ( AwsException $e ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( 'S3 Offloader: Failed to initialize S3 client: ' . $e->getMessage() );
-			return false;
-		}
+		self::$s3_client = new S3Client( $config );
+		return self::$s3_client;
 	}
 
 	/**

@@ -632,7 +632,15 @@ class Test_Uploader extends WP_UnitTestCase {
 			__DIR__ . '/fixtures/test-image.jpg'
 		);
 
-		$s3_url = 'https://test-bucket.s3.us-east-1.amazonaws.com/2026/02/test-image.jpg';
+		// Compute S3 URL based on test configuration.
+		$s3_key  = S3Offloader\Uploader::get_s3_key( $attachment_id );
+		$s3_base = S3Offloader\Uploader::get_s3_base_url(
+			S3Offloader\PluginConfig::get_bucket(),
+			S3Offloader\PluginConfig::get_endpoint(),
+			S3Offloader\PluginConfig::get_region(),
+			S3Offloader\PluginConfig::get_use_path_style()
+		);
+		$s3_url  = $s3_base . '/' . $s3_key;
 		update_post_meta( $attachment_id, S3Offloader\Uploader::META_S3_URL, $s3_url );
 
 		// Get metadata to check if thumbnails exist.
@@ -643,7 +651,7 @@ class Test_Uploader extends WP_UnitTestCase {
 
 			$this->assertIsArray( $result );
 			$this->assertCount( 4, $result );
-			$this->assertStringContainsString( 'localstack', $result[0] );
+			$this->assertStringContainsString( S3Offloader\PluginConfig::get_endpoint(), $result[0] );
 			$this->assertTrue( $result[3] );
 		} else {
 			$this->markTestSkipped( 'No thumbnail sizes available for testing' );
@@ -842,6 +850,320 @@ class Test_Uploader extends WP_UnitTestCase {
 		$result = S3Offloader\Uploader::upload_to_s3( $attachment_id );
 
 		$this->assertFalse( $result );
+	}
+
+	/**
+	 * Test get_s3_base_url with empty bucket returns empty string.
+	 *
+	 * @return void
+	 */
+	public function test_get_s3_base_url_with_empty_bucket() {
+		$base_url = S3Offloader\Uploader::get_s3_base_url( '', 'http://endpoint', 'us-east-1', false );
+
+		$this->assertEmpty( $base_url );
+	}
+
+	/**
+	 * Test get_s3_base_url with custom base prefix.
+	 *
+	 * @return void
+	 */
+	public function test_get_s3_base_url_with_custom_prefix() {
+		S3Offloader\PluginConfig::set_base_prefix( '/my-prefix/' );
+
+		$base_url = S3Offloader\Uploader::get_s3_base_url(
+			S3Offloader\PluginConfig::get_bucket(),
+			S3Offloader\PluginConfig::get_endpoint(),
+			S3Offloader\PluginConfig::get_region(),
+			S3Offloader\PluginConfig::get_use_path_style()
+		);
+
+		$this->assertStringEndsWith( '/my-prefix', $base_url );
+
+		// Reset.
+		S3Offloader\PluginConfig::set_base_prefix( '' );
+	}
+
+
+	/**
+	 * Test filter_image_downsize with no metadata returns original.
+	 *
+	 * @return void
+	 */
+	public function test_filter_image_downsize_without_metadata() {
+		$attachment_id = $this->factory->attachment->create_upload_object(
+			__DIR__ . '/fixtures/test-image.jpg'
+		);
+
+		// Set S3 URL but delete metadata.
+		$s3_key  = S3Offloader\Uploader::get_s3_key( $attachment_id );
+		$s3_base = S3Offloader\Uploader::get_s3_base_url(
+			S3Offloader\PluginConfig::get_bucket(),
+			S3Offloader\PluginConfig::get_endpoint(),
+			S3Offloader\PluginConfig::get_region(),
+			S3Offloader\PluginConfig::get_use_path_style()
+		);
+		$s3_url  = $s3_base . '/' . $s3_key;
+		update_post_meta( $attachment_id, S3Offloader\Uploader::META_S3_URL, $s3_url );
+
+		// Delete metadata.
+		delete_post_meta( $attachment_id, '_wp_attachment_metadata' );
+
+		$result = S3Offloader\Uploader::filter_image_downsize( false, $attachment_id, 'full' );
+
+		$this->assertFalse( $result );
+	}
+
+	/**
+	 * Test upload_thumbnails uploads all thumbnail sizes.
+	 *
+	 * @return void
+	 */
+	public function test_upload_thumbnails_uploads_all_sizes() {
+		$attachment_id = $this->factory->attachment->create_upload_object(
+			__DIR__ . '/fixtures/test-image.jpg'
+		);
+
+		$this->assertGreaterThan( 0, $attachment_id );
+
+		// Upload to S3 which will trigger thumbnail uploads.
+		$result = S3Offloader\Uploader::upload_to_s3( $attachment_id );
+		$this->assertTrue( $result );
+
+		// Verify thumbnails were created.
+		$metadata = wp_get_attachment_metadata( $attachment_id );
+		$this->assertNotEmpty( $metadata['sizes'] );
+
+		// Check that all thumbnails exist in S3 (they should be accessible).
+		$s3_client = S3Offloader\Uploader::get_s3_client();
+		$bucket    = S3Offloader\PluginConfig::get_bucket();
+		$main_key  = S3Offloader\Uploader::get_s3_key( $attachment_id );
+		$base_key  = dirname( $main_key );
+
+		foreach ( $metadata['sizes'] as $size_name => $size_data ) {
+			$thumbnail_key = $base_key . '/' . $size_data['file'];
+
+			try {
+				$result = $s3_client->headObject(
+					array(
+						'Bucket' => $bucket,
+						'Key'    => $thumbnail_key,
+					)
+				);
+				$this->assertNotEmpty( $result['ContentType'] );
+			} catch ( \Exception $e ) {
+				$this->fail( "Thumbnail {$size_name} not found in S3: {$thumbnail_key}" );
+			}
+		}
+	}
+
+	/**
+	 * Test upload_thumbnails with no thumbnail sizes.
+	 *
+	 * @return void
+	 */
+	public function test_upload_thumbnails_with_no_sizes() {
+		$attachment_id = $this->factory->attachment->create_upload_object(
+			__DIR__ . '/fixtures/test-image.jpg'
+		);
+
+		$this->assertGreaterThan( 0, $attachment_id );
+
+		// Remove all thumbnail sizes from metadata.
+		$metadata = wp_get_attachment_metadata( $attachment_id );
+		unset( $metadata['sizes'] );
+		wp_update_attachment_metadata( $attachment_id, $metadata );
+
+		// Upload to S3 - should succeed without errors even without thumbnails.
+		$result = S3Offloader\Uploader::upload_to_s3( $attachment_id );
+		$this->assertTrue( $result );
+
+		// Verify S3 URL was set for main file.
+		$s3_url = get_post_meta( $attachment_id, S3Offloader\Uploader::META_S3_URL, true );
+		$this->assertNotEmpty( $s3_url );
+	}
+
+	/**
+	 * Test upload_thumbnails with delete_local enabled.
+	 *
+	 * @return void
+	 */
+	public function test_upload_thumbnails_deletes_local_files() {
+		S3Offloader\PluginConfig::set_delete_local( true );
+
+		$attachment_id = $this->factory->attachment->create_upload_object(
+			__DIR__ . '/fixtures/test-image.jpg'
+		);
+
+		$this->assertGreaterThan( 0, $attachment_id );
+
+		// Get thumbnail paths before upload.
+		$metadata    = wp_get_attachment_metadata( $attachment_id );
+		$main_file   = get_attached_file( $attachment_id );
+		$upload_dir  = dirname( $main_file );
+		$thumb_paths = array();
+
+		if ( ! empty( $metadata['sizes'] ) ) {
+			foreach ( $metadata['sizes'] as $size_name => $size_data ) {
+				$thumb_paths[] = $upload_dir . '/' . $size_data['file'];
+			}
+		}
+
+		// Upload to S3.
+		$result = S3Offloader\Uploader::upload_to_s3( $attachment_id );
+		$this->assertTrue( $result );
+
+		// Verify main file was deleted.
+		$this->assertFileDoesNotExist( $main_file );
+
+		// Verify thumbnails were deleted.
+		foreach ( $thumb_paths as $thumb_path ) {
+			$this->assertFileDoesNotExist( $thumb_path );
+		}
+
+		// Reset.
+		S3Offloader\PluginConfig::set_delete_local( false );
+	}
+
+	/**
+	 * Test upload_thumbnails preserves local files when delete_local is disabled.
+	 *
+	 * @return void
+	 */
+	public function test_upload_thumbnails_preserves_local_files() {
+		S3Offloader\PluginConfig::set_delete_local( false );
+
+		$attachment_id = $this->factory->attachment->create_upload_object(
+			__DIR__ . '/fixtures/test-image.jpg'
+		);
+
+		$this->assertGreaterThan( 0, $attachment_id );
+
+		// Get thumbnail paths before upload.
+		$metadata    = wp_get_attachment_metadata( $attachment_id );
+		$main_file   = get_attached_file( $attachment_id );
+		$upload_dir  = dirname( $main_file );
+		$thumb_paths = array();
+
+		if ( ! empty( $metadata['sizes'] ) ) {
+			foreach ( $metadata['sizes'] as $size_name => $size_data ) {
+				$thumb_paths[] = $upload_dir . '/' . $size_data['file'];
+			}
+		}
+
+		// Upload to S3.
+		$result = S3Offloader\Uploader::upload_to_s3( $attachment_id );
+		$this->assertTrue( $result );
+
+		// Verify main file still exists.
+		$this->assertFileExists( $main_file );
+
+		// Verify thumbnails still exist.
+		foreach ( $thumb_paths as $thumb_path ) {
+			$this->assertFileExists( $thumb_path );
+		}
+	}
+
+	/**
+	 * Test upload_thumbnails with empty metadata.
+	 *
+	 * @return void
+	 */
+	public function test_upload_thumbnails_with_empty_metadata() {
+		$attachment_id = $this->factory->attachment->create_upload_object(
+			__DIR__ . '/fixtures/test-image.jpg'
+		);
+
+		$this->assertGreaterThan( 0, $attachment_id );
+
+		// Delete all metadata.
+		delete_post_meta( $attachment_id, '_wp_attachment_metadata' );
+
+		// Upload to S3 - should succeed without errors.
+		$result = S3Offloader\Uploader::upload_to_s3( $attachment_id );
+		$this->assertTrue( $result );
+
+		// Verify S3 URL was set for main file.
+		$s3_url = get_post_meta( $attachment_id, S3Offloader\Uploader::META_S3_URL, true );
+		$this->assertNotEmpty( $s3_url );
+	}
+
+	/**
+	 * Test upload_thumbnails with correct MIME types.
+	 *
+	 * @return void
+	 */
+	public function test_upload_thumbnails_uses_correct_mime_types() {
+		$attachment_id = $this->factory->attachment->create_upload_object(
+			__DIR__ . '/fixtures/test-image.jpg'
+		);
+
+		$this->assertGreaterThan( 0, $attachment_id );
+
+		// Upload to S3.
+		$result = S3Offloader\Uploader::upload_to_s3( $attachment_id );
+		$this->assertTrue( $result );
+
+		// Verify thumbnails have correct content type in S3.
+		$metadata  = wp_get_attachment_metadata( $attachment_id );
+		$s3_client = S3Offloader\Uploader::get_s3_client();
+		$bucket    = S3Offloader\PluginConfig::get_bucket();
+		$main_key  = S3Offloader\Uploader::get_s3_key( $attachment_id );
+		$base_key  = dirname( $main_key );
+
+		if ( ! empty( $metadata['sizes'] ) ) {
+			foreach ( $metadata['sizes'] as $size_name => $size_data ) {
+				$thumbnail_key = $base_key . '/' . $size_data['file'];
+				$expected_mime = $size_data['mime-type'] ?? get_post_mime_type( $attachment_id );
+
+				try {
+					$result = $s3_client->headObject(
+						array(
+							'Bucket' => $bucket,
+							'Key'    => $thumbnail_key,
+						)
+					);
+					$this->assertEquals( $expected_mime, $result['ContentType'] );
+				} catch ( \Exception $e ) {
+					$this->fail( "Failed to verify MIME type for {$size_name}: {$e->getMessage()}" );
+				}
+			}
+		}
+	}
+
+	/**
+	 * Test upload_thumbnails with missing thumbnail file.
+	 *
+	 * @return void
+	 */
+	public function test_upload_thumbnails_handles_missing_files() {
+		$attachment_id = $this->factory->attachment->create_upload_object(
+			__DIR__ . '/fixtures/test-image.jpg'
+		);
+
+		$this->assertGreaterThan( 0, $attachment_id );
+
+		// Get metadata and manually delete one thumbnail file.
+		$metadata   = wp_get_attachment_metadata( $attachment_id );
+		$main_file  = get_attached_file( $attachment_id );
+		$upload_dir = dirname( $main_file );
+
+		if ( ! empty( $metadata['sizes'] ) ) {
+			$first_size     = array_key_first( $metadata['sizes'] );
+			$thumbnail_file = $upload_dir . '/' . $metadata['sizes'][ $first_size ]['file'];
+			if ( file_exists( $thumbnail_file ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
+				unlink( $thumbnail_file );
+			}
+		}
+
+		// Upload to S3 - should succeed without fatal errors.
+		$result = S3Offloader\Uploader::upload_to_s3( $attachment_id );
+		$this->assertTrue( $result );
+
+		// Verify main file was still uploaded.
+		$s3_url = get_post_meta( $attachment_id, S3Offloader\Uploader::META_S3_URL, true );
+		$this->assertNotEmpty( $s3_url );
 	}
 
 	/**
