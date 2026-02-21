@@ -40,6 +40,13 @@ function _manually_load_plugin() {
 
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 
+// Define WP_CLI constant for CLI command registration.
+if ( ! defined( 'WP_CLI' ) ) {
+	define( 'WP_CLI', true );
+}
+
+// Load WP_CLI mock for CLI tests.
+require_once __DIR__ . '/helpers/class-wp-cli-mock.php';
 
 // Start up the WP testing environment.
 require "{$_tests_dir}/includes/bootstrap.php";

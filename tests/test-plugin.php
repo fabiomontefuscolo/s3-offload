@@ -1,35 +1,12 @@
 <?php
 /**
- * Tests for the Uploader class.
+ * Tests for the Plugin class.
  *
  * @package S3_Offloader
  */
 
 /**
- * Mock WP_CLI class for testing.
- */
-class WP_CLI_Mock {
-	private static $commands = array();
-
-	public static function add_command( $name, $callable ) {
-		self::$commands[ $name ] = $callable;
-	}
-
-	public static function has_command( $name ) {
-		return isset( self::$commands[ $name ] );
-	}
-
-	public static function get_command( $name ) {
-		return self::$commands[ $name ] ?? null;
-	}
-
-	public static function reset() {
-		self::$commands = array();
-	}
-}
-
-/**
- * Test case for Uploader class.
+ * Test case for Plugin class.
  */
 class PluginTest extends WP_UnitTestCase {
 	/**
@@ -73,29 +50,24 @@ class PluginTest extends WP_UnitTestCase {
 	 * Test that the CLI command is registered when WP_CLI is defined.
 	 */
 	public function test_cli_command_registered() {
-		$wp_cli_was_defined = defined( 'WP_CLI' );
+		// Reset the mock to ensure clean state.
+		WP_CLI::reset();
 
-		if ( ! $wp_cli_was_defined ) {
-			define( 'WP_CLI', true );
-		}
+		// Force re-initialization to register commands.
+		// Reset singleton first.
+		$reflection        = new ReflectionClass( S3Offloader\Plugin::class );
+		$instance_property = $reflection->getProperty( 'instance' );
+		$instance_property->setAccessible( true );
+		$instance_property->setValue( null, null );
 
-		if ( ! class_exists( 'WP_CLI' ) ) {
-			class_alias( 'WP_CLI_Mock', 'WP_CLI' );
-		}
-
-		// Reset the mock to ensure clean state
-		// (only exists in the mock)
-		if ( method_exists( 'WP_CLI', 'reset' ) ) {
-			\WP_CLI::reset();
-		}
-
+		// Get new instance which will register commands.
 		S3Offloader\Plugin::get_instance();
-		$this->assertTrue( \WP_CLI::has_command( 's3-offloader' ) );
 
-		if ( method_exists( 'WP_CLI', 'get_command' ) ) {
-			$command = \WP_CLI::get_command( 's3-offloader' );
-			$this->assertEquals( S3Offloader\CLI\Commands::class, $command );
-		}
+		// Verify command is registered.
+		$this->assertTrue( WP_CLI::has_command( 's3-offloader' ) );
+
+		$command = WP_CLI::get_command( 's3-offloader' );
+		$this->assertEquals( S3Offloader\CLI\Commands::class, $command );
 	}
 
 	/**
