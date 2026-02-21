@@ -71,7 +71,7 @@ docker-compose exec db mysql -u root -prootpassword -e "GRANT ALL PRIVILEGES ON 
 
 echo ""
 echo "Installing WordPress test suite..."
-docker-compose exec wordpress bash /var/www/html/wp-content/plugins/s3-offloader/bin/install-wp-tests-docker.sh wordpress_test wordpress wordpress db latest
+docker-compose exec wordpress bash /var/www/html/wp-content/plugins/s3-offloader/bin/install-wp-tests.sh wordpress_test wordpress wordpress db latest
 
 TEST_S3_OFFLOADER_BUCKET="test-bucket"
 _aws --endpoint-url=http://localhost:4566 s3 mb s3://${TEST_S3_OFFLOADER_BUCKET} --region ${AWS_DEFAULT_REGION}
