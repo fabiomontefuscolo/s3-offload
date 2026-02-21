@@ -20,15 +20,15 @@ class AdminSettingsPageTest extends WP_UnitTestCase {
 	 */
 	public function tearDown(): void {
 		// Clean up $_POST superglobal (form field names)
-		unset( $_POST['s3_offloader_access_key'] );
-		unset( $_POST['s3_offloader_secret_key'] );
-		unset( $_POST['s3_offloader_bucket'] );
-		unset( $_POST['s3_offloader_region'] );
-		unset( $_POST['s3_offloader_endpoint'] );
-		unset( $_POST['s3_offloader_use_path_style'] );
-		unset( $_POST['s3_offloader_base_prefix'] );
-		unset( $_POST['s3_offloader_delete_local'] );
-		unset( $_POST['s3_offloader_submit'] );
+		unset( $_POST[ SettingsPage::FIELD_ACCESS_KEY ] );
+		unset( $_POST[ SettingsPage::FIELD_SECRET_KEY ] );
+		unset( $_POST[ SettingsPage::FIELD_BUCKET ] );
+		unset( $_POST[ SettingsPage::FIELD_REGION ] );
+		unset( $_POST[ SettingsPage::FIELD_ENDPOINT ] );
+		unset( $_POST[ SettingsPage::FIELD_USE_PATH_STYLE ] );
+		unset( $_POST[ SettingsPage::FIELD_BASE_PREFIX ] );
+		unset( $_POST[ SettingsPage::FIELD_DELETE_LOCAL ] );
+		unset( $_POST[ SettingsPage::FIELD_SUBMIT ] );
 		unset( $_POST['_wpnonce'] );
 		unset( $_REQUEST['_wpnonce'] );
 
@@ -63,11 +63,11 @@ class AdminSettingsPageTest extends WP_UnitTestCase {
 		$dom->loadHTML( $html );
 		libxml_clear_errors();
 
-		$this->assertNotEmpty( $dom->getElementById( 's3_offloader_access_key' ) );
-		$this->assertNotEmpty( $dom->getElementById( 's3_offloader_secret_key' ) );
-		$this->assertNotEmpty( $dom->getElementById( 's3_offloader_bucket' ) );
-		$this->assertNotEmpty( $dom->getElementById( 's3_offloader_region' ) );
-		$this->assertNotEmpty( $dom->getElementById( 's3_offloader_endpoint' ) );
+		$this->assertNotEmpty( $dom->getElementById( SettingsPage::FIELD_ACCESS_KEY ) );
+		$this->assertNotEmpty( $dom->getElementById( SettingsPage::FIELD_SECRET_KEY ) );
+		$this->assertNotEmpty( $dom->getElementById( SettingsPage::FIELD_BUCKET ) );
+		$this->assertNotEmpty( $dom->getElementById( SettingsPage::FIELD_REGION ) );
+		$this->assertNotEmpty( $dom->getElementById( SettingsPage::FIELD_ENDPOINT ) );
 	}
 
 	/**
@@ -77,20 +77,20 @@ class AdminSettingsPageTest extends WP_UnitTestCase {
 		$user_id = $this->factory->user->create( array( 'role' => 'administrator' ) );
 		wp_set_current_user( $user_id );
 
-		$nonce = wp_create_nonce( 's3_offloader_settings' );
+		$nonce = wp_create_nonce( SettingsPage::NONCE_ACTION );
 
 		$access_key = bin2hex( random_bytes( 16 ) );
 		$secret_key = bin2hex( random_bytes( 16 ) );
 
-		$_POST['s3_offloader_access_key']     = $access_key;
-		$_POST['s3_offloader_secret_key']     = $secret_key;
-		$_POST['s3_offloader_bucket']         = 'test-bucket';
-		$_POST['s3_offloader_region']         = 'us-east-1';
-		$_POST['s3_offloader_endpoint']       = 'test-endpoint';
-		$_POST['s3_offloader_use_path_style'] = '1';
-		$_POST['s3_offloader_base_prefix']    = 'test-prefix';
-		$_POST['s3_offloader_delete_local']   = '1';
-		$_POST['s3_offloader_submit']         = '1';
+		$_POST[ SettingsPage::FIELD_ACCESS_KEY ]     = $access_key;
+		$_POST[ SettingsPage::FIELD_SECRET_KEY ]     = $secret_key;
+		$_POST[ SettingsPage::FIELD_BUCKET ]         = 'test-bucket';
+		$_POST[ SettingsPage::FIELD_REGION ]         = 'us-east-1';
+		$_POST[ SettingsPage::FIELD_ENDPOINT ]       = 'test-endpoint';
+		$_POST[ SettingsPage::FIELD_USE_PATH_STYLE ] = '1';
+		$_POST[ SettingsPage::FIELD_BASE_PREFIX ]    = 'test-prefix';
+		$_POST[ SettingsPage::FIELD_DELETE_LOCAL ]   = '1';
+		$_POST[ SettingsPage::FIELD_SUBMIT ]         = '1';
 		$_POST['_wpnonce']                    = $nonce;
 
 		// WordPress's check_admin_referer() checks $_REQUEST, not just $_POST
@@ -114,14 +114,14 @@ class AdminSettingsPageTest extends WP_UnitTestCase {
 	 * Test settings are saved with safe values
 	 */
 	public function test_saving_settings_with_safe_values() {
-		$_POST['s3_offloader_access_key']     = '<i>test-access-key';
-		$_POST['s3_offloader_secret_key']     = '<b>test-secret-key</b>';
-		$_POST['s3_offloader_bucket']         = 'test<b>-<b>bucket';
-		$_POST['s3_offloader_region']         = 'us-east-\1';
-		$_POST['s3_offloader_endpoint']       = 'test-endpoint<script>';
-		$_POST['s3_offloader_base_prefix']    = '\\test-prefix';
-		$_POST['s3_offloader_use_path_style'] = '11';
-		$_POST['s3_offloader_delete_local']   = '<b>';
+		$_POST[ SettingsPage::FIELD_ACCESS_KEY ]     = '<i>test-access-key';
+		$_POST[ SettingsPage::FIELD_SECRET_KEY ]     = '<b>test-secret-key</b>';
+		$_POST[ SettingsPage::FIELD_BUCKET ]         = 'test<b>-<b>bucket';
+		$_POST[ SettingsPage::FIELD_REGION ]         = 'us-east-\1';
+		$_POST[ SettingsPage::FIELD_ENDPOINT ]       = 'test-endpoint<script>';
+		$_POST[ SettingsPage::FIELD_BASE_PREFIX ]    = '\\test-prefix';
+		$_POST[ SettingsPage::FIELD_USE_PATH_STYLE ] = '11';
+		$_POST[ SettingsPage::FIELD_DELETE_LOCAL ]   = '<b>';
 
 		self::invoke_private_class_method( SettingsPage::class, 'save_settings', array() );
 
