@@ -54,10 +54,10 @@ jobs:
       - name: Validate composer.json and composer.lock
         run: composer validate --strict
 
-      - name: Install MySQL client
+      - name: Install MySQL client and Subversion
         run: |
           sudo apt-get update
-          sudo apt-get install -y mysql-client libmysqlclient-dev
+          sudo apt-get install -y mysql-client libmysqlclient-dev subversion
 
       - name: Cache Composer packages
         id: composer-cache
