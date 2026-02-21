@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Settings page for S3 Offloader.
  *
@@ -13,6 +14,7 @@ use S3Offloader\PluginConfig;
  * Admin settings page handler.
  */
 class SettingsPage {
+
 
 	/**
 	 * Render the settings page.
@@ -129,14 +131,17 @@ class SettingsPage {
 	private static function save_settings() {
 		// Nonce is already verified in render_page() before calling this method.
 		// phpcs:disable WordPress.Security.NonceVerification.Missing
+		$s3_offloader_use_path_style = isset( $_POST['s3_offloader_use_path_style'] ) && $_POST['s3_offloader_use_path_style'] === '1';
+		$s3_offloader_delete_local   = isset( $_POST['s3_offloader_delete_local'] ) && $_POST['s3_offloader_delete_local'] === '1';
+
 		update_option( 's3_offloader_access_key', sanitize_text_field( wp_unslash( $_POST['s3_offloader_access_key'] ?? '' ) ) );
 		update_option( 's3_offloader_secret_key', sanitize_text_field( wp_unslash( $_POST['s3_offloader_secret_key'] ?? '' ) ) );
 		update_option( 's3_offloader_bucket', sanitize_text_field( wp_unslash( $_POST['s3_offloader_bucket'] ?? '' ) ) );
 		update_option( 's3_offloader_region', sanitize_text_field( wp_unslash( $_POST['s3_offloader_region'] ?? 'us-east-1' ) ) );
 		update_option( 's3_offloader_endpoint', sanitize_text_field( wp_unslash( $_POST['s3_offloader_endpoint'] ?? '' ) ) );
 		update_option( 's3_offloader_base_prefix', sanitize_text_field( wp_unslash( $_POST['s3_offloader_base_prefix'] ?? '' ) ) );
-		update_option( 's3_offloader_use_path_style', isset( $_POST['s3_offloader_use_path_style'] ) );
-		update_option( 's3_offloader_delete_local', isset( $_POST['s3_offloader_delete_local'] ) );
+		update_option( 's3_offloader_use_path_style', $s3_offloader_use_path_style );
+		update_option( 's3_offloader_delete_local', $s3_offloader_delete_local );
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 	}
 }
