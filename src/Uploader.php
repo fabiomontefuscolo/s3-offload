@@ -36,11 +36,6 @@ class Uploader {
 		$use_path_style = PluginConfig::get_use_path_style();
 
 		if ( empty( $access_key ) || empty( $secret_key ) ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
-			trigger_error(
-				'S3 Offloader: AWS credentials are not set.',
-				E_USER_WARNING
-			);
 			return null;
 		}
 
@@ -75,6 +70,9 @@ class Uploader {
 		}
 
 		$config = self::get_s3_config();
+		if ( ! $config ) {
+			return false;
+		}
 
 		try {
 			self::$s3_client = new S3Client( $config );

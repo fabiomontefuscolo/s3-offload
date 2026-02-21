@@ -4,6 +4,9 @@
  *
  * @package S3_Offloader
  */
+use Aws\Command;
+use Aws\Exception\AwsException;
+use Aws\S3\S3Client;
 
 /**
  * Test case for Uploader class.
@@ -62,8 +65,6 @@ class Test_Uploader extends WP_UnitTestCase {
 	public function test_get_s3_config_with_empty_credentials() {
 		S3Offloader\PluginConfig::set_access_key( '' );
 		S3Offloader\PluginConfig::set_secret_key( '' );
-
-		$this->setExpectedException( 'PHPUnit_Framework_Error_Warning' );
 
 		$config = S3Offloader\Uploader::get_s3_config();
 
@@ -137,10 +138,10 @@ class Test_Uploader extends WP_UnitTestCase {
 		S3Offloader\PluginConfig::set_access_key( '' );
 		S3Offloader\PluginConfig::set_secret_key( '' );
 
-		$this->setExpectedException( 'PHPUnit_Framework_Error_Warning' );
-
 		$client = S3Offloader\Uploader::get_s3_client();
+		$this->assertFalse( $client );
 	}
+
 
 	/**
 	 * Test get_s3_base_url using virtual-hosted-style endpoint.
