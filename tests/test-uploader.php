@@ -1167,6 +1167,68 @@ class Test_Uploader extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test filter_image_srcset with empty s3_base_url.
+	 *
+	 * @return void
+	 */
+	public function test_filter_image_srcset_with_empty_base_url() {
+		$attachment_id = $this->factory->attachment->create_upload_object(
+			__DIR__ . '/fixtures/test-image.jpg'
+		);
+
+		// Set S3 URL but configure empty bucket to cause empty base URL.
+		update_post_meta( $attachment_id, S3Offloader\Uploader::META_S3_URL, 'http://example.com/test.jpg' );
+		S3Offloader\PluginConfig::set_bucket( '' );
+
+		// Use actual attachment URL as base for constructing thumbnail URLs.
+		$base_url = wp_get_attachment_url( $attachment_id );
+		$dir_url  = dirname( $base_url );
+		$sources  = array(
+			800 => array(
+				'url'        => $dir_url . '/test-image-800x600.jpg',
+				'descriptor' => 'w',
+				'value'      => 800,
+			),
+		);
+
+		$filtered = S3Offloader\Uploader::filter_image_srcset( $sources, array( 800, 600 ), '', array(), $attachment_id );
+
+		// Should return original sources when base URL is empty.
+		$this->assertEquals( $sources, $filtered );
+
+		// Reset bucket.
+		S3Offloader\PluginConfig::set_bucket( 'test-bucket' );
+	}
+
+	/**
+	 * Test convert_url_to_s3 with already converted S3 URL.
+	 *
+	 * @return void
+	 */
+	public function test_convert_url_to_s3_with_already_converted_url() {
+		$attachment_id = $this->factory->attachment->create_upload_object(
+			__DIR__ . '/fixtures/test-image.jpg'
+		);
+
+		// Compute S3 URL based on test configuration.
+		$s3_key  = S3Offloader\Uploader::get_s3_key( $attachment_id );
+		$s3_base = S3Offloader\Uploader::get_s3_base_url(
+			S3Offloader\PluginConfig::get_bucket(),
+			S3Offloader\PluginConfig::get_endpoint(),
+			S3Offloader\PluginConfig::get_region(),
+			S3Offloader\PluginConfig::get_use_path_style()
+		);
+		$s3_url  = $s3_base . '/' . $s3_key;
+
+		update_post_meta( $attachment_id, S3Offloader\Uploader::META_S3_URL, $s3_url );
+
+		// Pass an already converted S3 URL - it should return unchanged.
+		$filtered = S3Offloader\Uploader::filter_attachment_url( $s3_url, $attachment_id );
+
+		$this->assertEquals( $s3_url, $filtered );
+	}
+
+	/**
 	 * Helper method to set private class property value using reflection.
 	 *
 	 * @param object $object The object instance to modify.

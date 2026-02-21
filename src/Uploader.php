@@ -163,23 +163,17 @@ class Uploader {
 			return false;
 		}
 
-		try {
-			$result = $s3_client->putObject(
-				array(
-					'Bucket'      => $bucket,
-					'Key'         => $key,
-					'SourceFile'  => $file_path,
-					'ACL'         => 'public-read',
-					'ContentType' => $mime_type,
-				)
-			);
+		$result = $s3_client->putObject(
+			array(
+				'Bucket'      => $bucket,
+				'Key'         => $key,
+				'SourceFile'  => $file_path,
+				'ACL'         => 'public-read',
+				'ContentType' => $mime_type,
+			)
+		);
 
-			return $result['ObjectURL'];
-		} catch ( AwsException $e ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( 'S3 Offloader: Failed to upload file ' . $file_path . ': ' . $e->getMessage() );
-			return false;
-		}
+		return $result['ObjectURL'];
 	}
 
 	/**
