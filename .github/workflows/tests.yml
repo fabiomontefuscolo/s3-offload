@@ -82,41 +82,35 @@ jobs:
           WP_CORE_DIR: /tmp/wordpress
         run: |
           # Download and install WordPress core
-          mkdir -p $WP_CORE_DIR
-          if [ "$WP_VERSION" == "latest" ]; then
-            wget -q https://wordpress.org/latest.tar.gz -O /tmp/wordpress.tar.gz
-          else
-            wget -q https://wordpress.org/wordpress-$WP_VERSION.tar.gz -O /tmp/wordpress.tar.gz
-          fi
-          tar -xzf /tmp/wordpress.tar.gz -C /tmp
-          mv /tmp/wordpress/* $WP_CORE_DIR/
+          mkdir -p "${WP_CORE_DIR}"
+          wget -q "https://wordpress.org/wordpress-${WP_VERSION}.tar.gz" -O /tmp/wordpress.tar.gz
 
-          # Install WordPress test library
-          mkdir -p $WP_TESTS_DIR
+          tar -xzf /tmp/wordpress.tar.gz -C "${WP_CORE_DIR}" --strip-components=1
+          mkdir -p "${WP_TESTS_DIR}"
 
-          # Get WordPress version for test suite
-          WP_VER=$(php -r "include '$WP_CORE_DIR/wp-includes/version.php'; echo \$wp_version;")
-          WP_TESTS_TAG="branches/${WP_VER%%-*}"
+          WP_TESTS_TAG="branches/${WP_VERSION%%-*}"
 
           # Download test suite
-          svn export --quiet --ignore-externals https://develop.svn.wordpress.org/${WP_TESTS_TAG}/tests/phpunit/includes/ $WP_TESTS_DIR/includes
-          svn export --quiet --ignore-externals https://develop.svn.wordpress.org/${WP_TESTS_TAG}/tests/phpunit/data/ $WP_TESTS_DIR/data
+          svn export --quiet --ignore-externals "https://develop.svn.wordpress.org/${WP_TESTS_TAG}/tests/phpunit/includes/" "${WP_TESTS_DIR}/includes"
+          svn export --quiet --ignore-externals "https://develop.svn.wordpress.org/${WP_TESTS_TAG}/tests/phpunit/data/" "${WP_TESTS_DIR}/data"
 
-          # Download db.php drop-in
-          wget -q https://raw.githubusercontent.com/markoheijnen/wp-mysqli/master/db.php -O $WP_CORE_DIR/wp-content/db.php
+          cat > "${WP_CORE_DIR}/wp-content/db.php" << 'PHP'
+          <?php
+          if ( ! defined( 'WP_USE_EXT_MYSQL' ) ) {
+            define( 'WP_USE_EXT_MYSQL', false );
+          }
+          PHP
 
           # Create wp-tests-config.php
-          cp $WP_TESTS_DIR/includes/install.php $WP_TESTS_DIR/includes/install.php.bak 2>/dev/null || true
-
-          cat > "$WP_TESTS_DIR/wp-tests-config.php" <<PHP
+          cat > "${WP_TESTS_DIR}/wp-tests-config.php" <<PHP
           <?php
-          define( 'ABSPATH', '$WP_CORE_DIR/' );
+          define( 'ABSPATH', '${WP_CORE_DIR}/' );
           define( 'WP_DEFAULT_THEME', 'default' );
           define( 'WP_DEBUG', true );
-          define( 'DB_NAME', '$DB_NAME' );
-          define( 'DB_USER', '$DB_USER' );
-          define( 'DB_PASSWORD', '$DB_PASS' );
-          define( 'DB_HOST', '$DB_HOST' );
+          define( 'DB_NAME', '${DB_NAME}' );
+          define( 'DB_USER', '${DB_USER}' );
+          define( 'DB_PASSWORD', '${DB_PASS}' );
+          define( 'DB_HOST', '${DB_HOST}' );
           define( 'DB_CHARSET', 'utf8mb4' );
           define( 'DB_COLLATE', '' );
           define( 'AUTH_KEY', 'testing' );
@@ -136,8 +130,8 @@ jobs:
           PHP
 
           echo "✓ WordPress test environment setup complete"
-          echo "  WordPress: $(php -r "include '$WP_CORE_DIR/wp-includes/version.php'; echo \$wp_version;")"
-          echo "  Test Suite: $WP_TESTS_TAG"
+          echo "  WordPress: $(php -r "include '${WP_CORE_DIR}/wp-includes/version.php'; echo \$wp_version;")"
+          echo "  Test Suite: ${WP_TESTS_TAG}"
 
       - name: Wait for LocalStack
         run: |
