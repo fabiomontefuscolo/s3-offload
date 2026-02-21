@@ -13,12 +13,25 @@ namespace S3Offloader;
 class PluginConfig {
 
 	/**
+	 * WordPress option key constants.
+	 */
+	public const OPTION_ACCESS_KEY     = 's3_offloader_access_key';
+	public const OPTION_SECRET_KEY     = 's3_offloader_secret_key';
+	public const OPTION_BUCKET         = 's3_offloader_bucket';
+	public const OPTION_REGION         = 's3_offloader_region';
+	public const OPTION_ENDPOINT       = 's3_offloader_endpoint';
+	public const OPTION_USE_PATH_STYLE = 's3_offloader_use_path_style';
+	public const OPTION_DELETE_LOCAL   = 's3_offloader_delete_local';
+	public const OPTION_BASE_PREFIX    = 's3_offloader_base_prefix';
+
+	/**
 	 * Get AWS access key.
 	 *
 	 * @return string|null
 	 */
 	public static function get_access_key(): string|null {
-		return get_option( 's3_offloader_access_key', null );
+		$value = get_option( self::OPTION_ACCESS_KEY );
+		return ( false === $value || '' === $value ) ? null : $value;
 	}
 
 	/**
@@ -28,9 +41,9 @@ class PluginConfig {
 	 */
 	public static function set_access_key( string $access_key ): void {
 		if ( empty( $access_key ) ) {
-			delete_option( 's3_offloader_access_key' );
+			delete_option( self::OPTION_ACCESS_KEY );
 		} else {
-			update_option( 's3_offloader_access_key', $access_key );
+			update_option( self::OPTION_ACCESS_KEY, $access_key );
 		}
 	}
 
@@ -40,7 +53,8 @@ class PluginConfig {
 	 * @return string|null
 	 */
 	public static function get_secret_key(): string|null {
-		return get_option( 's3_offloader_secret_key' , null);
+		$value = get_option( self::OPTION_SECRET_KEY );
+		return ( false === $value || '' === $value ) ? null : $value;
 	}
 
 	/**
@@ -50,9 +64,9 @@ class PluginConfig {
 	 */
 	public static function set_secret_key( string $secret_key ): void {
 		if ( empty( $secret_key ) ) {
-			delete_option( 's3_offloader_secret_key' );
+			delete_option( self::OPTION_SECRET_KEY );
 		} else {
-			update_option( 's3_offloader_secret_key', $secret_key );
+			update_option( self::OPTION_SECRET_KEY, $secret_key );
 		}
 	}
 
@@ -62,7 +76,7 @@ class PluginConfig {
 	 * @return string
 	 */
 	public static function get_region(): string {
-		return get_option( 's3_offloader_region', 'us-east-1' );
+		return get_option( self::OPTION_REGION, 'us-east-1' );
 	}
 
 	/**
@@ -72,9 +86,9 @@ class PluginConfig {
 	 */
 	public static function set_region( string $region ): void {
 		if ( empty( $region ) ) {
-			delete_option( 's3_offloader_region' );
+			delete_option( self::OPTION_REGION );
 		} else {
-			update_option( 's3_offloader_region', $region );
+			update_option( self::OPTION_REGION, $region );
 		}
 	}
 
@@ -84,7 +98,7 @@ class PluginConfig {
 	 * @return string
 	 */
 	public static function get_endpoint(): string {
-		return get_option( 's3_offloader_endpoint', '' );
+		return get_option( self::OPTION_ENDPOINT, '' );
 	}
 
 	/**
@@ -94,9 +108,9 @@ class PluginConfig {
 	 */
 	public static function set_endpoint( string $endpoint ): void {
 		if ( empty( $endpoint ) ) {
-			delete_option( 's3_offloader_endpoint' );
+			delete_option( self::OPTION_ENDPOINT );
 		} else {
-			update_option( 's3_offloader_endpoint', $endpoint );
+			update_option( self::OPTION_ENDPOINT, $endpoint );
 		}
 	}
 
@@ -107,7 +121,7 @@ class PluginConfig {
 	 */
 	public static function get_use_path_style(): bool {
 		return in_array(
-			get_option( 's3_offloader_use_path_style', false ),
+			get_option( self::OPTION_USE_PATH_STYLE, false ),
 			array( true, 'true', 1, '1' ),
 			true
 		);
@@ -119,7 +133,7 @@ class PluginConfig {
 	 * @param bool $use_path_style Whether to use path-style endpoint.
 	 */
 	public static function set_use_path_style( bool $use_path_style ): void {
-		update_option( 's3_offloader_use_path_style', $use_path_style === true );
+		update_option( self::OPTION_USE_PATH_STYLE, $use_path_style === true );
 	}
 
 	/**
@@ -128,7 +142,8 @@ class PluginConfig {
 	 * @return string|null
 	 */
 	public static function get_bucket(): string|null {
-		return get_option( 's3_offloader_bucket', null );
+		$value = get_option( self::OPTION_BUCKET );
+		return ( false === $value || '' === $value ) ? null : $value;
 	}
 
 	/**
@@ -138,9 +153,9 @@ class PluginConfig {
 	 */
 	public static function set_bucket( string $bucket ): void {
 		if ( empty( $bucket ) ) {
-			delete_option( 's3_offloader_bucket' );
+			delete_option( self::OPTION_BUCKET );
 		} else {
-			update_option( 's3_offloader_bucket', $bucket );
+			update_option( self::OPTION_BUCKET, $bucket );
 		}
 	}
 
@@ -150,7 +165,7 @@ class PluginConfig {
 	 * @return bool
 	 */
 	public static function get_delete_local(): bool {
-		return get_option( 's3_offloader_delete_local', false ) === true;
+		return get_option( self::OPTION_DELETE_LOCAL, false ) === true;
 	}
 
 	/**
@@ -159,7 +174,7 @@ class PluginConfig {
 	 * @param bool $delete_local Whether to delete local files after upload.
 	 */
 	public static function set_delete_local( bool $delete_local ): void {
-		update_option( 's3_offloader_delete_local', $delete_local === true );
+		update_option( self::OPTION_DELETE_LOCAL, $delete_local === true );
 	}
 
 	/**
@@ -168,7 +183,7 @@ class PluginConfig {
 	 * @return string
 	 */
 	public static function get_base_prefix(): string {
-		return get_option( 's3_offloader_base_prefix', '' );
+		return get_option( self::OPTION_BASE_PREFIX, '' );
 	}
 
 	/**
@@ -178,9 +193,9 @@ class PluginConfig {
 	 */
 	public static function set_base_prefix( string $base_prefix ): void {
 		if ( empty( $base_prefix ) ) {
-			delete_option( 's3_offloader_base_prefix' );
+			delete_option( self::OPTION_BASE_PREFIX );
 		} else {
-			update_option( 's3_offloader_base_prefix', $base_prefix );
+			update_option( self::OPTION_BASE_PREFIX, $base_prefix );
 		}
 	}
 }

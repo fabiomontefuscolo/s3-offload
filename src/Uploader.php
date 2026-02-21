@@ -16,6 +16,11 @@ use Aws\Exception\AwsException;
 class Uploader {
 
 	/**
+	 * Post meta key for S3 URL.
+	 */
+	public const META_S3_URL = '_s3_offloader_url';
+
+	/**
 	 * S3 client instance.
 	 *
 	 * @var S3Client|null
@@ -142,7 +147,7 @@ class Uploader {
 		}
 
 		// Store S3 URL in post meta.
-		update_post_meta( $attachment_id, '_s3_offloader_url', $s3_url );
+		update_post_meta( $attachment_id, self::META_S3_URL, $s3_url );
 
 		// Upload related files.
 		self::upload_thumbnails( $s3_client, $bucket, $attachment_id, $file, $key );
@@ -232,7 +237,7 @@ class Uploader {
 	 * @return string Modified or original URL.
 	 */
 	public static function filter_attachment_url( $url, $attachment_id ) {
-		$s3_url = get_post_meta( $attachment_id, '_s3_offloader_url', true );
+		$s3_url = get_post_meta( $attachment_id, self::META_S3_URL, true );
 		if ( ! empty( $s3_url ) ) {
 			return $s3_url;
 		}
@@ -294,7 +299,7 @@ class Uploader {
 	 */
 	private static function convert_url_to_s3( $url, $attachment_id ) {
 		// Check if this attachment is offloaded to S3.
-		$s3_url = get_post_meta( $attachment_id, '_s3_offloader_url', true );
+		$s3_url = get_post_meta( $attachment_id, self::META_S3_URL, true );
 		if ( empty( $s3_url ) ) {
 			return $url;
 		}
@@ -397,7 +402,7 @@ class Uploader {
 	 */
 	public static function filter_image_downsize( $downsize, $attachment_id, $size ) {
 		// Check if this attachment is offloaded to S3.
-		$s3_url = get_post_meta( $attachment_id, '_s3_offloader_url', true );
+		$s3_url = get_post_meta( $attachment_id, self::META_S3_URL, true );
 		if ( empty( $s3_url ) ) {
 			return $downsize;
 		}
@@ -445,7 +450,7 @@ class Uploader {
 		$attachment_id = $attachment->ID;
 
 		// Check if this attachment is offloaded to S3.
-		$s3_url = get_post_meta( $attachment_id, '_s3_offloader_url', true );
+		$s3_url = get_post_meta( $attachment_id, self::META_S3_URL, true );
 		if ( empty( $s3_url ) ) {
 			return $response;
 		}
@@ -494,7 +499,7 @@ class Uploader {
 			$attachment_id = attachment_url_to_postid( $url );
 
 			if ( $attachment_id ) {
-				$s3_url = get_post_meta( $attachment_id, '_s3_offloader_url', true );
+				$s3_url = get_post_meta( $attachment_id, self::META_S3_URL, true );
 				if ( ! empty( $s3_url ) ) {
 					$s3_converted_url = self::convert_url_to_s3( $url, $attachment_id );
 					$content          = str_replace( $url, $s3_converted_url, $content );
