@@ -18,7 +18,7 @@ class PluginConfig {
 	 * @return string|null
 	 */
 	public static function get_access_key(): string|null {
-		return get_option( 's3_offloader_access_key' );
+		return get_option( 's3_offloader_access_key', null );
 	}
 
 	/**
@@ -40,7 +40,7 @@ class PluginConfig {
 	 * @return string|null
 	 */
 	public static function get_secret_key(): string|null {
-		return get_option( 's3_offloader_secret_key' );
+		return get_option( 's3_offloader_secret_key' , null);
 	}
 
 	/**
@@ -128,7 +128,7 @@ class PluginConfig {
 	 * @return string|null
 	 */
 	public static function get_bucket(): string|null {
-		return get_option( 's3_offloader_bucket' );
+		return get_option( 's3_offloader_bucket', null );
 	}
 
 	/**
