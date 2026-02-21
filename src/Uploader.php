@@ -120,13 +120,7 @@ class Uploader {
 		}
 
 		$file = get_attached_file( $attachment_id );
-		if ( ! file_exists( $file ) ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error -- Intentional for debugging.
-			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Error message context.
-			trigger_error(
-				'S3 Offloader: File does not exist for attachment ID ' . esc_html( $attachment_id ),
-				E_USER_WARNING
-			);
+		if ( ! $file || ! file_exists( $file ) ) {
 			return false;
 		}
 
@@ -304,9 +298,7 @@ class Uploader {
 			return $url;
 		}
 
-		// Get the upload directory info.
-		$uploads     = wp_upload_dir();
-		$base_url    = $uploads['baseurl'];
+		// Get the S3 base URL.
 		$s3_base_url = self::get_s3_base_url(
 			PluginConfig::get_bucket(),
 			PluginConfig::get_endpoint(),
@@ -317,6 +309,15 @@ class Uploader {
 		if ( empty( $s3_base_url ) ) {
 			return $url;
 		}
+
+		// Check if URL is already an S3 URL (to avoid double conversion).
+		if ( strpos( $url, $s3_base_url ) === 0 ) {
+			return $url;
+		}
+
+		// Get the upload directory info.
+		$uploads  = wp_upload_dir();
+		$base_url = $uploads['baseurl'];
 
 		// Replace the local URL with S3 URL.
 		return str_replace( $base_url, $s3_base_url, $url );
@@ -413,9 +414,13 @@ class Uploader {
 			return $downsize;
 		}
 
-		// Handle array size (width, height).
+		// Handle array size (width, height) by returning full size.
+		// WordPress core can't resize if the file is only on S3.
 		if ( is_array( $size ) ) {
-			return $downsize;
+			$width  = $meta['width'] ?? 0;
+			$height = $meta['height'] ?? 0;
+			$url    = self::convert_url_to_s3( wp_get_attachment_url( $attachment_id ), $attachment_id );
+			return array( $url, $width, $height, false );
 		}
 
 		// Get the appropriate size data.
