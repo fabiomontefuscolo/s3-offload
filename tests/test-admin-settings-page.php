@@ -19,6 +19,7 @@ class AdminSettingsPageTest extends WP_UnitTestCase {
 	 * Clean up after each test.
 	 */
 	public function tearDown(): void {
+		// Clean up $_POST superglobal (form field names)
 		unset( $_POST['s3_offloader_access_key'] );
 		unset( $_POST['s3_offloader_secret_key'] );
 		unset( $_POST['s3_offloader_bucket'] );
@@ -29,6 +30,17 @@ class AdminSettingsPageTest extends WP_UnitTestCase {
 		unset( $_POST['s3_offloader_delete_local'] );
 		unset( $_POST['s3_offloader_submit'] );
 		unset( $_POST['_wpnonce'] );
+		unset( $_REQUEST['_wpnonce'] );
+
+		// Clean up WordPress options
+		delete_option( PluginConfig::OPTION_ACCESS_KEY );
+		delete_option( PluginConfig::OPTION_SECRET_KEY );
+		delete_option( PluginConfig::OPTION_BUCKET );
+		delete_option( PluginConfig::OPTION_REGION );
+		delete_option( PluginConfig::OPTION_ENDPOINT );
+		delete_option( PluginConfig::OPTION_USE_PATH_STYLE );
+		delete_option( PluginConfig::OPTION_BASE_PREFIX );
+		delete_option( PluginConfig::OPTION_DELETE_LOCAL );
 
 		parent::tearDown();
 	}
