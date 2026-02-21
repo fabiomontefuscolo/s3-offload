@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+      
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-dev --optimize-autoloader
+      
+      - name: Create plugin archive
+        run: |
+          # Create a clean directory for the plugin
+          mkdir -p s3-offloader
+          
+          # Copy plugin files (exclude dev files)
+          rsync -av --exclude='.git' \
+                   --exclude='.github' \
+                   --exclude='tests' \
+                   --exclude='bin' \
+                   --exclude='.gitignore' \
+                   --exclude='.gitattributes' \
+                   --exclude='composer.json' \
+                   --exclude='composer.lock' \
+                   --exclude='phpunit.xml.dist' \
+                   --exclude='phpcs.xml.dist' \
+                   --exclude='*.md' \
+                   --exclude='coverage' \
+                   --exclude='coverage.xml' \
+                   --exclude='node_modules' \
+                   ./ s3-offloader/
+          
+          # Create zip archive
+          zip -r s3-offloader.zip s3-offloader/
+      
+      - name: Extract release notes
+        id: extract-release-notes
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+          # Extract release notes from CHANGELOG.md if it exists
+          if [ -f "CHANGELOG.md" ]; then
+            # Extract section for this version
+            sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | sed '$ d' > release-notes.md
+            if [ ! -s release-notes.md ]; then
+              echo "Release $VERSION" > release-notes.md
+            fi
+          else
+            echo "Release $VERSION" > release-notes.md
+          fi
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: s3-offloader.zip
+          body_path: release-notes.md
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload to WordPress.org
+        if: secrets.WP_ORG_USERNAME != '' && secrets.WP_ORG_PASSWORD != ''
+        run: |
+          echo "WordPress.org deployment would happen here"
+          # Implement WordPress.org SVN deployment if needed
+        env:
+          WP_ORG_USERNAME: ${{ secrets.WP_ORG_USERNAME }}
+          WP_ORG_PASSWORD: ${{ secrets.WP_ORG_PASSWORD }}

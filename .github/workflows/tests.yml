@@ -1,0 +1,210 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        php: ['8.1', '8.2', '8.3']
+        wordpress: ['latest', '6.4']
+      fail-fast: false
+    
+    name: PHP ${{ matrix.php }} - WordPress ${{ matrix.wordpress }}
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: rootpassword
+          MYSQL_DATABASE: wordpress_test
+          MYSQL_USER: wordpress
+          MYSQL_PASSWORD: wordpress
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping -h localhost -u wordpress -pwordpress" --health-interval=10s --health-timeout=5s --health-retries=5
+      
+      localstack:
+        image: localstack/localstack:latest
+        env:
+          SERVICES: s3
+          DEBUG: 0
+          EAGER_SERVICE_LOADING: 1
+        ports:
+          - 4566:4566
+        options: --health-cmd="curl -f http://localhost:4566/_localstack/health || exit 1" --health-interval=10s --health-timeout=5s --health-retries=10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, mysql, mysqli, pdo_mysql, bcmath, soap, intl, gd, exif, iconv
+          coverage: xdebug
+      
+      - name: Validate composer.json and composer.lock
+        run: composer validate --strict
+      
+      - name: Install MySQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mysql-client libmysqlclient-dev
+      
+      - name: Cache Composer packages
+        id: composer-cache
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ matrix.php }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-${{ matrix.php }}-
+      
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+      
+      - name: Setup WordPress test environment
+        env:
+          WP_VERSION: ${{ matrix.wordpress }}
+          DB_HOST: 127.0.0.1:3306
+          DB_NAME: wordpress_test
+          DB_USER: wordpress
+          DB_PASS: wordpress
+          WP_TESTS_DIR: /tmp/wordpress-tests-lib
+          WP_CORE_DIR: /tmp/wordpress
+        run: |
+          # Download and install WordPress core
+          mkdir -p $WP_CORE_DIR
+          if [ "$WP_VERSION" == "latest" ]; then
+            wget -q https://wordpress.org/latest.tar.gz -O /tmp/wordpress.tar.gz
+          else
+            wget -q https://wordpress.org/wordpress-$WP_VERSION.tar.gz -O /tmp/wordpress.tar.gz
+          fi
+          tar -xzf /tmp/wordpress.tar.gz -C /tmp
+          mv /tmp/wordpress/* $WP_CORE_DIR/
+          
+          # Install WordPress test library
+          mkdir -p $WP_TESTS_DIR
+          
+          # Get WordPress version for test suite
+          WP_VER=$(php -r "include '$WP_CORE_DIR/wp-includes/version.php'; echo \$wp_version;")
+          WP_TESTS_TAG="branches/${WP_VER%%-*}"
+          
+          # Download test suite
+          svn export --quiet --ignore-externals https://develop.svn.wordpress.org/${WP_TESTS_TAG}/tests/phpunit/includes/ $WP_TESTS_DIR/includes
+          svn export --quiet --ignore-externals https://develop.svn.wordpress.org/${WP_TESTS_TAG}/tests/phpunit/data/ $WP_TESTS_DIR/data
+          
+          # Download db.php drop-in
+          wget -q https://raw.githubusercontent.com/markoheijnen/wp-mysqli/master/db.php -O $WP_CORE_DIR/wp-content/db.php
+          
+          # Create wp-tests-config.php
+          cp $WP_TESTS_DIR/includes/install.php $WP_TESTS_DIR/includes/install.php.bak 2>/dev/null || true
+          
+          cat > "$WP_TESTS_DIR/wp-tests-config.php" <<PHP
+          <?php
+          define( 'ABSPATH', '$WP_CORE_DIR/' );
+          define( 'WP_DEFAULT_THEME', 'default' );
+          define( 'WP_DEBUG', true );
+          define( 'DB_NAME', '$DB_NAME' );
+          define( 'DB_USER', '$DB_USER' );
+          define( 'DB_PASSWORD', '$DB_PASS' );
+          define( 'DB_HOST', '$DB_HOST' );
+          define( 'DB_CHARSET', 'utf8mb4' );
+          define( 'DB_COLLATE', '' );
+          define( 'AUTH_KEY', 'testing' );
+          define( 'SECURE_AUTH_KEY', 'testing' );
+          define( 'LOGGED_IN_KEY', 'testing' );
+          define( 'NONCE_KEY', 'testing' );
+          define( 'AUTH_SALT', 'testing' );
+          define( 'SECURE_AUTH_SALT', 'testing' );
+          define( 'LOGGED_IN_SALT', 'testing' );
+          define( 'NONCE_SALT', 'testing' );
+          \$table_prefix = 'wptests_';
+          define( 'WP_TESTS_DOMAIN', 'example.org' );
+          define( 'WP_TESTS_EMAIL', 'admin@example.org' );
+          define( 'WP_TESTS_TITLE', 'Test Blog' );
+          define( 'WP_PHP_BINARY', 'php' );
+          define( 'WPLANG', '' );
+          PHP
+          
+          echo "✓ WordPress test environment setup complete"
+          echo "  WordPress: $(php -r "include '$WP_CORE_DIR/wp-includes/version.php'; echo \$wp_version;")"
+          echo "  Test Suite: $WP_TESTS_TAG"
+      
+      - name: Wait for LocalStack
+        run: |
+          echo "Waiting for LocalStack S3 to be ready..."
+          for i in {1..60}; do
+            HEALTH=$(curl -s http://localhost:4566/_localstack/health 2>/dev/null || echo '{}')
+            if echo "$HEALTH" | grep -q '"s3".*"available"\|"s3".*"running"'; then
+              echo "LocalStack S3 is ready!"
+              echo "$HEALTH"
+              break
+            fi
+            if [ $i -eq 60 ]; then
+              echo "LocalStack failed to start properly"
+              echo "Health check response: $HEALTH"
+              exit 1
+            fi
+            echo "Waiting for LocalStack... ($i/60)"
+            sleep 2
+          done
+      
+      - name: Configure LocalStack S3
+        env:
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_DEFAULT_REGION: us-east-1
+        run: |
+          # Install AWS CLI v2
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip -q awscliv2.zip
+          sudo ./aws/install --update
+          
+          # Create test bucket with public-read ACL
+          aws --endpoint-url=http://localhost:4566 s3 mb s3://test-bucket --region us-east-1 || echo "Bucket may already exist"
+          aws --endpoint-url=http://localhost:4566 s3api put-bucket-acl --bucket test-bucket --acl public-read || echo "ACL set"
+          
+          # Verify bucket exists
+          aws --endpoint-url=http://localhost:4566 s3 ls
+          echo "✓ LocalStack S3 configured"
+      
+      - name: Run tests
+        env:
+          WP_TESTS_DIR: /tmp/wordpress-tests-lib
+          WP_CORE_DIR: /tmp/wordpress
+        run: |
+          # Show test configuration
+          echo "Running tests with:"
+          echo "  PHP: $(php -v | head -n 1)"
+          echo "  WordPress: ${{ matrix.wordpress }}"
+          echo "  Test Suite Directory: $WP_TESTS_DIR"
+          
+          # Run PHPUnit tests
+          vendor/bin/phpunit --verbose
+      
+      - name: Run tests with coverage
+        if: matrix.php == '8.2' && matrix.wordpress == 'latest'
+        env:
+          WP_TESTS_DIR: /tmp/wordpress-tests-lib
+          WP_CORE_DIR: /tmp/wordpress
+        run: |
+          vendor/bin/phpunit --coverage-clover coverage.xml --coverage-text
+      
+      - name: Upload coverage to Codecov
+        if: matrix.php == '8.2' && matrix.wordpress == 'latest'
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+          verbose: true
