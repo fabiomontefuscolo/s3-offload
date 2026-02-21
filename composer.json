@@ -2,6 +2,7 @@
   "name": "fabiomontefuscolo/s3-offloader",
   "description": "WordPress plugin to offload media files S3-like storage services.",
   "type": "wordpress-plugin",
+  "license": "MIT",
   "require": {
     "php": ">=7.4",
     "aws/aws-sdk-php": "^3.0"
