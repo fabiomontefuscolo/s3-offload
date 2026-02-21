@@ -134,14 +134,26 @@ class SettingsPage {
 		$s3_offloader_use_path_style = isset( $_POST['s3_offloader_use_path_style'] ) && $_POST['s3_offloader_use_path_style'] === '1';
 		$s3_offloader_delete_local   = isset( $_POST['s3_offloader_delete_local'] ) && $_POST['s3_offloader_delete_local'] === '1';
 
-		update_option( 's3_offloader_access_key', sanitize_text_field( wp_unslash( $_POST['s3_offloader_access_key'] ?? '' ) ) );
-		update_option( 's3_offloader_secret_key', sanitize_text_field( wp_unslash( $_POST['s3_offloader_secret_key'] ?? '' ) ) );
-		update_option( 's3_offloader_bucket', sanitize_text_field( wp_unslash( $_POST['s3_offloader_bucket'] ?? '' ) ) );
-		update_option( 's3_offloader_region', sanitize_text_field( wp_unslash( $_POST['s3_offloader_region'] ?? 'us-east-1' ) ) );
-		update_option( 's3_offloader_endpoint', sanitize_text_field( wp_unslash( $_POST['s3_offloader_endpoint'] ?? '' ) ) );
-		update_option( 's3_offloader_base_prefix', sanitize_text_field( wp_unslash( $_POST['s3_offloader_base_prefix'] ?? '' ) ) );
-		update_option( 's3_offloader_use_path_style', $s3_offloader_use_path_style );
-		update_option( 's3_offloader_delete_local', $s3_offloader_delete_local );
+		PluginConfig::set_access_key(
+			sanitize_text_field( wp_unslash( $_POST['s3_offloader_access_key'] ?? '' ) )
+		);
+		PluginConfig::set_secret_key(
+			sanitize_text_field( wp_unslash( $_POST['s3_offloader_secret_key'] ?? '' ) )
+		);
+		PluginConfig::set_region(
+			sanitize_text_field( wp_unslash( $_POST['s3_offloader_region'] ?? 'us-east-1' ) )
+		);
+		PluginConfig::set_endpoint(
+			sanitize_text_field( wp_unslash( $_POST['s3_offloader_endpoint'] ?? '' ) )
+		);
+		PluginConfig::set_bucket(
+			sanitize_text_field( wp_unslash( $_POST['s3_offloader_bucket'] ?? '' ) )
+		);
+		PluginConfig::set_base_prefix(
+			sanitize_text_field( wp_unslash( $_POST['s3_offloader_base_prefix'] ?? '' ) )
+		);
+		PluginConfig::set_use_path_style( $s3_offloader_use_path_style );
+		PluginConfig::set_delete_local( $s3_offloader_delete_local );
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 	}
 }
