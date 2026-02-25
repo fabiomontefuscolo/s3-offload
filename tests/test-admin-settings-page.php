@@ -95,7 +95,7 @@ class AdminSettingsPageTest extends WP_UnitTestCase {
 		$_POST[ SettingsPage::FIELD_CDN_URL ]        = 'https://cdn.example.com';
 		$_POST[ SettingsPage::FIELD_DELETE_LOCAL ]   = '1';
 		$_POST[ SettingsPage::FIELD_SUBMIT ]         = '1';
-		$_POST['_wpnonce']                    = $nonce;
+		$_POST['_wpnonce']                           = $nonce;
 
 		// WordPress's check_admin_referer() checks $_REQUEST, not just $_POST
 		$_REQUEST['_wpnonce'] = $nonce;
