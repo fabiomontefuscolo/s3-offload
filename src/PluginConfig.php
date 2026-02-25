@@ -218,7 +218,7 @@ class PluginConfig {
 		if ( empty( $cdn_url ) ) {
 			delete_option( self::OPTION_CDN_URL );
 		} else {
-			// Remove trailing slash
+			// Remove trailing slash.
 			$cdn_url = rtrim( $cdn_url, '/' );
 			update_option( self::OPTION_CDN_URL, $cdn_url );
 		}

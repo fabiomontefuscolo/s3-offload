@@ -126,10 +126,6 @@ class Uploader {
 		if ( ! $s3_url ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error -- Intentional for debugging.
 			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Error message context.
-			trigger_error(
-				'S3 Offloader: Failed to upload main file for attachment ID ' . esc_html( $attachment_id ),
-				E_USER_WARNING
-			);
 			return false;
 		}
 
@@ -325,20 +321,20 @@ class Uploader {
 		$region,
 		$use_path_style
 	) {
-		// Check if CDN URL is configured - if so, use it exclusively
+		// Check if CDN URL is configured - if so, use it exclusively.
 		$cdn_url = PluginConfig::get_cdn_url();
 		if ( ! empty( $cdn_url ) ) {
-			// Remove trailing slash but preserve protocol
+			// Remove trailing slash but preserve protocol.
 			$cdn_url = rtrim( $cdn_url, '/' );
 
-			// Add https:// if no protocol specified
+			// Add https:// if no protocol specified.
 			if ( ! preg_match( '#^https?://#', $cdn_url ) ) {
 				$cdn_url = 'https://' . $cdn_url;
 			}
 
 			$base_url = $cdn_url;
 
-			// Append custom base prefix if configured
+			// Append custom base prefix if configured.
 			$custom_prefix = PluginConfig::get_base_prefix();
 			if ( ! empty( $custom_prefix ) ) {
 				$custom_prefix = trim( $custom_prefix, '/' );
@@ -348,7 +344,7 @@ class Uploader {
 			return $base_url;
 		}
 
-		// Original S3 URL logic (fallback when no CDN is configured)
+		// Original S3 URL logic (fallback when no CDN is configured).
 		if ( empty( $bucket ) ) {
 			return '';
 		}
