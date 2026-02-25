@@ -34,6 +34,7 @@ class Test_Uploader extends WP_UnitTestCase {
 	public function tear_down(): void {
 		parent::tear_down();
 		self::set_private_class_property( S3Offloader\Uploader::class, 's3_client', null );
+		delete_option( S3Offloader\PluginConfig::OPTION_CDN_URL );
 	}
 
 	/**
@@ -882,6 +883,167 @@ class Test_Uploader extends WP_UnitTestCase {
 
 		// Reset.
 		S3Offloader\PluginConfig::set_base_prefix( '' );
+	}
+
+	/**
+	 * Test get_s3_base_url with CDN URL configured.
+	 *
+	 * @return void
+	 */
+	public function test_get_s3_base_url_with_cdn_url() {
+		S3Offloader\PluginConfig::set_cdn_url( 'https://cdn.example.com' );
+
+		$base_url = S3Offloader\Uploader::get_s3_base_url(
+			S3Offloader\PluginConfig::get_bucket(),
+			S3Offloader\PluginConfig::get_endpoint(),
+			S3Offloader\PluginConfig::get_region(),
+			S3Offloader\PluginConfig::get_use_path_style()
+		);
+
+		$this->assertEquals( 'https://cdn.example.com', $base_url );
+
+		// Reset.
+		S3Offloader\PluginConfig::set_cdn_url( '' );
+	}
+
+	/**
+	 * Test get_s3_base_url with CDN URL and custom prefix.
+	 *
+	 * @return void
+	 */
+	public function test_get_s3_base_url_with_cdn_url_and_prefix() {
+		S3Offloader\PluginConfig::set_cdn_url( 'https://d123abc.cloudfront.net' );
+		S3Offloader\PluginConfig::set_base_prefix( 'production' );
+
+		$base_url = S3Offloader\Uploader::get_s3_base_url(
+			S3Offloader\PluginConfig::get_bucket(),
+			S3Offloader\PluginConfig::get_endpoint(),
+			S3Offloader\PluginConfig::get_region(),
+			S3Offloader\PluginConfig::get_use_path_style()
+		);
+
+		$this->assertEquals( 'https://d123abc.cloudfront.net/production', $base_url );
+
+		// Reset.
+		S3Offloader\PluginConfig::set_cdn_url( '' );
+		S3Offloader\PluginConfig::set_base_prefix( '' );
+	}
+
+	/**
+	 * Test get_s3_base_url with CDN URL overrides S3 settings.
+	 *
+	 * @return void
+	 */
+	public function test_get_s3_base_url_cdn_url_overrides_s3() {
+		S3Offloader\PluginConfig::set_cdn_url( 'https://pub-xyz.r2.dev' );
+
+		$base_url = S3Offloader\Uploader::get_s3_base_url(
+			S3Offloader\PluginConfig::get_bucket(),
+			S3Offloader\PluginConfig::get_endpoint(),
+			S3Offloader\PluginConfig::get_region(),
+			S3Offloader\PluginConfig::get_use_path_style()
+		);
+
+		// Should return CDN URL, not S3 URL
+		$this->assertEquals( 'https://pub-xyz.r2.dev', $base_url );
+		$this->assertStringNotContainsString( 'localstack', $base_url );
+		$this->assertStringNotContainsString( 's3.', $base_url );
+
+		// Reset.
+		S3Offloader\PluginConfig::set_cdn_url( '' );
+	}
+
+	/**
+	 * Test get_s3_base_url with CDN URL preserves HTTP protocol.
+	 *
+	 * @return void
+	 */
+	public function test_get_s3_base_url_cdn_url_preserves_http() {
+		S3Offloader\PluginConfig::set_cdn_url( 'http://cdn.example.com' );
+
+		$base_url = S3Offloader\Uploader::get_s3_base_url(
+			S3Offloader\PluginConfig::get_bucket(),
+			S3Offloader\PluginConfig::get_endpoint(),
+			S3Offloader\PluginConfig::get_region(),
+			S3Offloader\PluginConfig::get_use_path_style()
+		);
+
+		// Should preserve HTTP for development environments
+		$this->assertEquals( 'http://cdn.example.com', $base_url );
+
+		// Reset.
+		S3Offloader\PluginConfig::set_cdn_url( '' );
+	}
+
+	/**
+	 * Test get_s3_base_url with CDN URL adds HTTPS when no protocol specified.
+	 *
+	 * @return void
+	 */
+	public function test_get_s3_base_url_cdn_url_defaults_to_https() {
+		S3Offloader\PluginConfig::set_cdn_url( 'cdn.example.com' );
+
+		$base_url = S3Offloader\Uploader::get_s3_base_url(
+			S3Offloader\PluginConfig::get_bucket(),
+			S3Offloader\PluginConfig::get_endpoint(),
+			S3Offloader\PluginConfig::get_region(),
+			S3Offloader\PluginConfig::get_use_path_style()
+		);
+
+		// Should default to HTTPS when no protocol specified
+		$this->assertEquals( 'https://cdn.example.com', $base_url );
+
+		// Reset.
+		S3Offloader\PluginConfig::set_cdn_url( '' );
+	}
+
+	/**
+	 * Test filter_attachment_url with CDN URL configured.
+	 *
+	 * @return void
+	 */
+	public function test_filter_attachment_url_with_cdn_url() {
+		S3Offloader\PluginConfig::set_cdn_url( 'https://cdn.example.com' );
+
+		$attachment_id = $this->factory->attachment->create_upload_object( __DIR__ . '/fixtures/test-image.jpg' );
+		$s3_url        = 'https://cdn.example.com/2024/01/test-image.jpg';
+		update_post_meta( $attachment_id, S3Offloader\Uploader::META_S3_URL, $s3_url );
+
+		$filtered_url = apply_filters( 'wp_get_attachment_url', 'http://example.com/wp-content/uploads/2024/01/test-image.jpg', $attachment_id );
+
+		$this->assertEquals( $s3_url, $filtered_url );
+		$this->assertStringContainsString( 'cdn.example.com', $filtered_url );
+
+		// Reset.
+		S3Offloader\PluginConfig::set_cdn_url( '' );
+	}
+
+	/**
+	 * Test convert_url_to_s3 with CDN URL.
+	 *
+	 * @return void
+	 */
+	public function test_convert_url_to_s3_with_cdn_url() {
+		S3Offloader\PluginConfig::set_cdn_url( 'https://d123abc.cloudfront.net' );
+
+		$attachment_id = $this->factory->attachment->create_upload_object( __DIR__ . '/fixtures/test-image.jpg' );
+		$s3_url        = 'https://d123abc.cloudfront.net/2024/01/test-image.jpg';
+		update_post_meta( $attachment_id, S3Offloader\Uploader::META_S3_URL, $s3_url );
+
+		$uploads   = wp_upload_dir();
+		$local_url = $uploads['baseurl'] . '/2024/01/test-image.jpg';
+
+		$reflection = new ReflectionClass( S3Offloader\Uploader::class );
+		$method     = $reflection->getMethod( 'convert_url_to_s3' );
+		$method->setAccessible( true );
+
+		$converted_url = $method->invokeArgs( null, array( $local_url, $attachment_id ) );
+
+		$this->assertStringContainsString( 'd123abc.cloudfront.net', $converted_url );
+		$this->assertStringNotContainsString( 'wp-content/uploads', $converted_url );
+
+		// Reset.
+		S3Offloader\PluginConfig::set_cdn_url( '' );
 	}
 
 

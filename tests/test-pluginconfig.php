@@ -27,6 +27,7 @@ class PluginConfigTest extends WP_UnitTestCase {
 		delete_option( PluginConfig::OPTION_USE_PATH_STYLE );
 		delete_option( PluginConfig::OPTION_DELETE_LOCAL );
 		delete_option( PluginConfig::OPTION_BASE_PREFIX );
+		delete_option( PluginConfig::OPTION_CDN_URL );
 	}
 
 	/**
@@ -176,5 +177,32 @@ class PluginConfigTest extends WP_UnitTestCase {
 		$this->assertTrue( PluginConfig::get_use_path_style() );
 		$this->assertTrue( PluginConfig::get_delete_local() );
 		$this->assertEquals( 'test-prefix', PluginConfig::get_base_prefix() );
+	}
+
+	/**
+	 * Test CDN URL getter and setter.
+	 */
+	public function test_cdn_url() {
+		$this->assertEquals( '', PluginConfig::get_cdn_url() );
+
+		PluginConfig::set_cdn_url( 'https://cdn.example.com' );
+		$this->assertEquals( 'https://cdn.example.com', PluginConfig::get_cdn_url() );
+
+		PluginConfig::set_cdn_url( 'https://d123abc.cloudfront.net/' );
+		$this->assertEquals( 'https://d123abc.cloudfront.net', PluginConfig::get_cdn_url() );
+
+		PluginConfig::set_cdn_url( '' );
+		$this->assertEquals( '', PluginConfig::get_cdn_url() );
+	}
+
+	/**
+	 * Test CDN URL trims trailing slashes.
+	 */
+	public function test_cdn_url_trims_trailing_slash() {
+		PluginConfig::set_cdn_url( 'https://cdn.example.com/' );
+		$this->assertEquals( 'https://cdn.example.com', PluginConfig::get_cdn_url() );
+
+		PluginConfig::set_cdn_url( 'https://cdn.example.com///' );
+		$this->assertEquals( 'https://cdn.example.com', PluginConfig::get_cdn_url() );
 	}
 }

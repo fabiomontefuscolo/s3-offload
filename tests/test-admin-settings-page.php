@@ -27,6 +27,7 @@ class AdminSettingsPageTest extends WP_UnitTestCase {
 		unset( $_POST[ SettingsPage::FIELD_ENDPOINT ] );
 		unset( $_POST[ SettingsPage::FIELD_USE_PATH_STYLE ] );
 		unset( $_POST[ SettingsPage::FIELD_BASE_PREFIX ] );
+		unset( $_POST[ SettingsPage::FIELD_CDN_URL ] );
 		unset( $_POST[ SettingsPage::FIELD_DELETE_LOCAL ] );
 		unset( $_POST[ SettingsPage::FIELD_SUBMIT ] );
 		unset( $_POST['_wpnonce'] );
@@ -40,6 +41,7 @@ class AdminSettingsPageTest extends WP_UnitTestCase {
 		delete_option( PluginConfig::OPTION_ENDPOINT );
 		delete_option( PluginConfig::OPTION_USE_PATH_STYLE );
 		delete_option( PluginConfig::OPTION_BASE_PREFIX );
+		delete_option( PluginConfig::OPTION_CDN_URL );
 		delete_option( PluginConfig::OPTION_DELETE_LOCAL );
 
 		parent::tearDown();
@@ -68,6 +70,7 @@ class AdminSettingsPageTest extends WP_UnitTestCase {
 		$this->assertNotEmpty( $dom->getElementById( SettingsPage::FIELD_BUCKET ) );
 		$this->assertNotEmpty( $dom->getElementById( SettingsPage::FIELD_REGION ) );
 		$this->assertNotEmpty( $dom->getElementById( SettingsPage::FIELD_ENDPOINT ) );
+		$this->assertNotEmpty( $dom->getElementById( SettingsPage::FIELD_CDN_URL ) );
 	}
 
 	/**
@@ -89,6 +92,7 @@ class AdminSettingsPageTest extends WP_UnitTestCase {
 		$_POST[ SettingsPage::FIELD_ENDPOINT ]       = 'test-endpoint';
 		$_POST[ SettingsPage::FIELD_USE_PATH_STYLE ] = '1';
 		$_POST[ SettingsPage::FIELD_BASE_PREFIX ]    = 'test-prefix';
+		$_POST[ SettingsPage::FIELD_CDN_URL ]        = 'https://cdn.example.com';
 		$_POST[ SettingsPage::FIELD_DELETE_LOCAL ]   = '1';
 		$_POST[ SettingsPage::FIELD_SUBMIT ]         = '1';
 		$_POST['_wpnonce']                    = $nonce;
@@ -107,6 +111,7 @@ class AdminSettingsPageTest extends WP_UnitTestCase {
 		$this->assertEquals( 'test-endpoint', PluginConfig::get_endpoint() );
 		$this->assertEquals( true, PluginConfig::get_use_path_style() );
 		$this->assertEquals( 'test-prefix', PluginConfig::get_base_prefix() );
+		$this->assertEquals( 'https://cdn.example.com', PluginConfig::get_cdn_url() );
 		$this->assertEquals( true, PluginConfig::get_delete_local() );
 	}
 
@@ -120,6 +125,7 @@ class AdminSettingsPageTest extends WP_UnitTestCase {
 		$_POST[ SettingsPage::FIELD_REGION ]         = 'us-east-\1';
 		$_POST[ SettingsPage::FIELD_ENDPOINT ]       = 'test-endpoint<script>';
 		$_POST[ SettingsPage::FIELD_BASE_PREFIX ]    = '\\test-prefix';
+		$_POST[ SettingsPage::FIELD_CDN_URL ]        = 'https://cdn.example.com/<script>';
 		$_POST[ SettingsPage::FIELD_USE_PATH_STYLE ] = '11';
 		$_POST[ SettingsPage::FIELD_DELETE_LOCAL ]   = '<b>';
 
@@ -131,6 +137,7 @@ class AdminSettingsPageTest extends WP_UnitTestCase {
 		$this->assertEquals( 'us-east-1', PluginConfig::get_region() );
 		$this->assertEquals( 'test-endpoint', PluginConfig::get_endpoint() );
 		$this->assertEquals( 'test-prefix', PluginConfig::get_base_prefix() );
+		$this->assertEquals( 'https://cdn.example.com', PluginConfig::get_cdn_url() );
 		$this->assertEquals( false, PluginConfig::get_use_path_style() );
 		$this->assertEquals( false, PluginConfig::get_delete_local() );
 	}

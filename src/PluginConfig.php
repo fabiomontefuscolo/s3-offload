@@ -23,6 +23,7 @@ class PluginConfig {
 	public const OPTION_USE_PATH_STYLE = 's3_offloader_use_path_style';
 	public const OPTION_DELETE_LOCAL   = 's3_offloader_delete_local';
 	public const OPTION_BASE_PREFIX    = 's3_offloader_base_prefix';
+	public const OPTION_CDN_URL        = 's3_offloader_cdn_url';
 
 	/**
 	 * Get AWS access key.
@@ -196,6 +197,30 @@ class PluginConfig {
 			delete_option( self::OPTION_BASE_PREFIX );
 		} else {
 			update_option( self::OPTION_BASE_PREFIX, $base_prefix );
+		}
+	}
+
+	/**
+	 * Get CDN URL.
+	 *
+	 * @return string
+	 */
+	public static function get_cdn_url(): string {
+		return get_option( self::OPTION_CDN_URL, '' );
+	}
+
+	/**
+	 * Set CDN URL.
+	 *
+	 * @param string $cdn_url The CDN URL to set.
+	 */
+	public static function set_cdn_url( string $cdn_url ): void {
+		if ( empty( $cdn_url ) ) {
+			delete_option( self::OPTION_CDN_URL );
+		} else {
+			// Remove trailing slash
+			$cdn_url = rtrim( $cdn_url, '/' );
+			update_option( self::OPTION_CDN_URL, $cdn_url );
 		}
 	}
 }

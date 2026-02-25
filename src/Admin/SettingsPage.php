@@ -24,6 +24,7 @@ class SettingsPage {
 	public const FIELD_ENDPOINT       = 's3_offloader_endpoint';
 	public const FIELD_USE_PATH_STYLE = 's3_offloader_use_path_style';
 	public const FIELD_BASE_PREFIX    = 's3_offloader_base_prefix';
+	public const FIELD_CDN_URL        = 's3_offloader_cdn_url';
 	public const FIELD_DELETE_LOCAL   = 's3_offloader_delete_local';
 	public const FIELD_SUBMIT         = 's3_offloader_submit';
 
@@ -55,6 +56,7 @@ class SettingsPage {
 		$use_path_style = PluginConfig::get_use_path_style();
 		$delete_local   = PluginConfig::get_delete_local();
 		$base_prefix    = PluginConfig::get_base_prefix();
+		$cdn_url        = PluginConfig::get_cdn_url();
 		?>
 		<div class="wrap">
 			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
@@ -125,6 +127,15 @@ class SettingsPage {
 					</tr>
 					<tr>
 						<th scope="row">
+							<label for="<?php echo esc_attr( self::FIELD_CDN_URL ); ?>"><?php esc_html_e( 'CDN URL', 's3-offloader' ); ?></label>
+						</th>
+						<td>
+							<input type="text" id="<?php echo esc_attr( self::FIELD_CDN_URL ); ?>" name="<?php echo esc_attr( self::FIELD_CDN_URL ); ?>" value="<?php echo esc_attr( $cdn_url ); ?>" class="regular-text" />
+							<p class="description"><?php esc_html_e( 'Optional CDN domain for serving files (e.g., "https://cdn.example.com", "http://localhost:8080" for development). Supports both HTTP and HTTPS. When set, this will be used instead of the S3 bucket URL. Leave empty to use direct S3 URLs.', 's3-offloader' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row">
 							<?php esc_html_e( 'Delete Local Files', 's3-offloader' ); ?>
 						</th>
 						<td>
@@ -167,6 +178,9 @@ class SettingsPage {
 		);
 		PluginConfig::set_base_prefix(
 			sanitize_text_field( wp_unslash( $_POST[ self::FIELD_BASE_PREFIX ] ?? '' ) )
+		);
+		PluginConfig::set_cdn_url(
+			sanitize_text_field( wp_unslash( $_POST[ self::FIELD_CDN_URL ] ?? '' ) )
 		);
 		PluginConfig::set_use_path_style( $s3_offloader_use_path_style );
 		PluginConfig::set_delete_local( $s3_offloader_delete_local );
